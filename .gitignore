@@ -6,3 +6,4 @@ data/
 !.env.example
 npm-debug.log*
 *.yaml.tmp
+auth_key.md
