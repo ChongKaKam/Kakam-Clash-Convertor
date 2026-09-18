@@ -185,7 +185,7 @@ const server = http.createServer(async (req, res) => {
       });
       res.writeHead(200, {
         'content-type': 'text/yaml; charset=utf-8',
-        'content-disposition': `inline; filename="${output[2]}.yaml"`,
+        'content-disposition': `attachment; filename=${{ tvos: 'tvOS', ios: 'iOS', android: 'Android' }[output[2]]}-kakamlab.yaml`,
         'profile-update-interval': String(config.refreshIntervalMinutes / 60),
         'cache-control': 'private, no-store',
       });

@@ -4,13 +4,15 @@ services:
     image: clash-subscription-converter:latest
     restart: unless-stopped
     environment:
-      ADMIN_TOKEN: ${ADMIN_TOKEN:?set ADMIN_TOKEN in .env}
-      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?set ADMIN_TOKEN in .env.production}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?set PUBLIC_BASE_URL in .env.production}
       REFRESH_INTERVAL_MINUTES: ${REFRESH_INTERVAL_MINUTES:-360}
+      FETCH_TIMEOUT_MS: ${FETCH_TIMEOUT_MS:-15000}
+      MAX_SUBSCRIPTION_BYTES: ${MAX_SUBSCRIPTION_BYTES:-10485760}
       ALLOW_PRIVATE_UPSTREAMS: ${ALLOW_PRIVATE_UPSTREAMS:-false}
       LATENCY_TIMEOUT_MS: ${LATENCY_TIMEOUT_MS:-5000}
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${PORT:-8080}:8080"
     volumes:
       - clash-converter-data:/data
 

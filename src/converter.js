@@ -11,6 +11,8 @@ export const REGIONS = [
   { key: 'jp', name: 'JP 日本自动', pattern: /(日本|Japan|Tokyo|Osaka|\bJP\b|🇯🇵)/i },
 ];
 
+export const AI_AUTO_GROUP = '🌈 AI 自动';
+
 const BASE = {
   'mixed-port': 7890,
   'allow-lan': true,
@@ -79,16 +81,23 @@ export function buildSubscription(text, device = 'android', options = {}) {
     url: 'https://www.gstatic.com/generate_204', interval: 300, tolerance: 80, lazy: true,
   }));
   const autoNames = autoGroups.map((group) => group.name);
+  // Filter after device compatibility checks; never add DIRECT or other US nodes.
+  const aiNames = allNames.filter((name) => name.startsWith('直连-美国'));
+  const aiAuto = aiNames.length ? {
+    name: AI_AUTO_GROUP, type: 'url-test', proxies: aiNames,
+    url: 'https://www.gstatic.com/generate_204', interval: 300, tolerance: 80, lazy: true,
+  } : null;
   const preferred = (key) => regionNames[key].length ? REGIONS.find((region) => region.key === key).name : undefined;
   const compact = (values) => [...new Set(values.filter(Boolean))];
 
   const serviceGroup = (key, first = []) => ({
     name: GROUP[key], type: 'select',
-    proxies: compact([...first, '🚀 节点选择', ...autoNames, 'DIRECT', ...allNames]),
+    proxies: compact([...first, ...(['ai', 'intelligence'].includes(key) && aiAuto ? [aiAuto.name] : []), '🚀 节点选择', ...autoNames, 'DIRECT', ...allNames]),
   });
   const groups = [
     { name: '🚀 节点选择', type: 'select', proxies: compact([...autoNames, ...allNames, 'DIRECT']) },
     ...autoGroups,
+    ...(aiAuto ? [aiAuto] : []),
     serviceGroup('ai', [preferred('us'), preferred('tw'), preferred('jp')]),
     serviceGroup('intelligence', [preferred('us'), preferred('jp'), preferred('tw')]),
     serviceGroup('youtube'), serviceGroup('netflix'), serviceGroup('hbo', [preferred('us')]),

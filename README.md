@@ -6,6 +6,7 @@
 
 - 支持 Clash/Mihomo YAML，以及常见 Base64/URI 节点订阅（SS、VMess、VLESS、Trojan、Hysteria2、TUIC）。
 - 香港、台湾、美国、日本独立 `url-test` 自动测速组；没有节点的地区不会生成空策略组。
+- 新增 `🌈 AI 自动`，仅包含名称以 `直连-美国` 开头且兼容当前设备的节点（不含 `pro-*`、其他地区或 `DIRECT`）。AI 平台和 Apple-智能均可选择它，原有默认选项保持不变。若过滤后无符合节点，则省略该组及选项，避免空组；例如 tvOS 会先排除 Mieru。
 - 地区使用服务自带 PNG 图标和 `HK/TW/US/JP` 文字标识，不依赖系统旗帜 Emoji 字体；生成的配置带有对应 `icon` URL。
 - 网页按设备可视化展示地区组、服务组、配置默认策略和过滤后的节点，支持按组筛选、名称/协议搜索、延迟排序。
 - 网页可通过独立 Mihomo 内核实测过滤后节点的 HTTP 延迟，展示进度、成功/失败和测试时间。
@@ -48,12 +49,12 @@ IP-CIDR6,fd00::/8
 ## Docker 部署
 
 ```bash
-cp .env.example .env
-# 编辑 .env：至少设置强 ADMIN_TOKEN 和外网 PUBLIC_BASE_URL
-docker compose up -d --build
+cp .env.production.example .env.production
+# 首次编辑 .env.production：设置强 ADMIN_TOKEN 和外网 PUBLIC_BASE_URL
+docker compose --env-file .env.production up -d --build
 ```
 
-访问 `http://服务器地址:8080`，输入 `ADMIN_TOKEN`，添加上游订阅。生产环境建议由 Caddy、Nginx 或 Traefik 提供 HTTPS，且不要直接公开未启用令牌的管理接口。
+Compose 默认仅绑定 `127.0.0.1:8080`，供宿主机上的 Caddy/Nginx 反向代理使用；不会直接开放公网 8080。配置 HTTPS 后访问 `PUBLIC_BASE_URL`，输入 `ADMIN_TOKEN`，添加上游订阅。若反向代理也在容器中，应通过 Docker 网络连接服务，不能直接使用代理容器自身的 `127.0.0.1`。
 
 Docker 镜像内置 Mihomo v1.19.29，无需额外安装测速内核。`PUBLIC_BASE_URL` 应设置为设备能访问的服务地址；订阅中的地区图标也从这个地址获取。修改图标或分组后，需在客户端更新订阅；不支持 `icon` 字段的客户端仍能看到地区文字标识。
 
@@ -109,14 +110,35 @@ sub.example.com {
 
 ```bash
 npm install
+cp .env.local.example .env.local
+# 仅首次设置本地选项；已有 .env.local 时不要再次覆盖。
 npm test
-ADMIN_TOKEN=dev-token npm start
+npm run dev
 ```
 
-本地启用网页测速时指定已安装的内核，例如 macOS Clash Verge：
+`npm run dev` 使用 `.env.local` 并监听代码变化；`npm run start:local` 使用同一文件但不监听。本机已有数据继续放在 `./data`，远端 Docker 使用独立命名卷 `/data`。本地模板的 Mihomo 路径适用于 macOS Clash Verge；其他环境首次修改该路径或留空禁用网页测速。
+
+### 环境分离：以后只换启动命令，不来回改配置
+
+| 环境 | 配置（仅首次填写） | 启动/更新命令 | 数据 |
+|---|---|---|---|
+| 本地开发 | `.env.local` | `npm run dev` | 本机 `./data` |
+| 本地体验 | `.env.local` | `npm run start:local` | 同上 |
+| 远端部署 | `.env.production` | `docker compose --env-file .env.production up -d --build` | Docker 命名卷 `/data` |
+
+两份私有环境文件均不提交 Git、不进入 Docker 构建上下文。不要把 `.env.local` 上传到远端；上传时排除 `.env`、`.env.local`、`.env.production` 和 `data/`，但保留对应 `.example` 模板。远端配置只需在服务器保存一次，之后更新代码无需覆盖它。`.env.example` 保留用于旧部署参考，新的流程使用两份专用模板。
+
+本地 `PUBLIC_BASE_URL` 留空时根据访问地址生成链接：给手机/电视复制链接时，应使用 Mac 的局域网 IP 访问管理页，不能用 `localhost`。也可以在 `.env.local` 固定局域网地址。远端必须设置设备可访问的 HTTPS 域名，不继承 Mac 地址或本地内网放行设置。Shell 中已导出的同名变量优先于环境文件；排查意外配置时检查这些变量。原始 `npm start` 保持只读取进程环境，不自动读取任何 `.env` 文件。
+
+远端日常检查：
 
 ```bash
-ADMIN_TOKEN=dev-token MIHOMO_BIN='/Applications/Clash Verge.app/Contents/MacOS/verge-mihomo' npm start
+docker compose --env-file .env.production ps
+docker compose --env-file .env.production logs --tail=100
 ```
+
+## 下载文件名称
+
+设备订阅 URL 保持原来的 `/sub/:token/tvos.yaml`、`ios.yaml`、`android.yaml`，无需更换已有链接。HTTP 下载响应使用无引号的 `Content-Disposition: attachment; filename=...`，文件名分别为 `tvOS-kakamlab.yaml`、`iOS-kakamlab.yaml`、`Android-kakamlab.yaml`。保留 `.yaml` 扩展名用于软件识别配置。客户端若自行给已有订阅命名，不一定会随下载文件名更新，需要手动重命名。
 
 服务只缓存上游原文与必要元数据，不会把订阅凭据写入日志或前端列表。请把 `/data` 作为敏感数据备份和保护。

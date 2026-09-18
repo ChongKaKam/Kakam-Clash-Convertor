@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import YAML from 'yaml';
-import { convertSubscription, summarizeSubscription } from '../src/converter.js';
+import { convertSubscription, summarizeSubscription, buildSubscription, subscriptionPreview } from '../src/converter.js';
 
 const source = `
 proxies:
@@ -41,4 +41,37 @@ test('summarizes selected nodes by region', () => {
   assert.deepEqual(summarizeSubscription(source), {
     proxyCount: 4, selectedCount: 3, ruleCount: 4, regions: { hk: 1, tw: 0, us: 1, jp: 1 },
   });
+});
+
+test('AI auto contains only direct-US nodes after device filtering and is offered to both AI groups', () => {
+  const input = YAML.stringify({ proxies: [
+    { name: '直连-美国01', type: 'mieru' },
+    { name: '直连-美国02', type: 'trojan' },
+    { name: 'pro-美国03', type: 'trojan' },
+    { name: '直连-日本01', type: 'trojan' },
+    { name: 'pro-直连-美国04', type: 'trojan' },
+  ] });
+  for (const device of ['ios', 'android', 'tvos']) {
+    const config = buildSubscription(input, device);
+    const groups = config['proxy-groups'];
+    const ai = groups.find(g => g.name === '🌈 AI 自动');
+    assert.ok(ai);
+    assert.equal(ai.type, 'url-test');
+    assert.deepEqual(ai.proxies, device === 'tvos' ? ['直连-美国02'] : ['直连-美国01', '直连-美国02']);
+    for (const name of ['🤖 AI 平台', '🍎 Apple-智能']) {
+      const group = groups.find(g => g.name === name);
+      assert.ok(group.proxies.includes(ai.name));
+      assert.equal(group.proxies[0], 'US 美国自动');
+    }
+    assert.ok(!groups.find(g => g.name === '🔎 Google').proxies.includes(ai.name));
+    assert.deepEqual(subscriptionPreview(config, device).groups.find(g => g.name === ai.name).members, ai.proxies);
+  }
+});
+
+test('AI auto is omitted without eligible nodes and never falls back to DIRECT or pro-US', () => {
+  const input = YAML.stringify({ proxies: [
+    { name: '直连-美国01', type: 'mieru' }, { name: 'pro-美国01', type: 'trojan' },
+  ] });
+  const groups = buildSubscription(input, 'tvos')['proxy-groups'];
+  assert.ok(!groups.some(g => g.name === '🌈 AI 自动' || g.proxies.includes('🌈 AI 自动')));
 });

@@ -89,6 +89,8 @@ test('authenticated whitelist survives restart and immediately changes existing 
     assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type'), /yaml/);
     assert.match(response.headers.get('cache-control'), /no-store/);
+    const label = { tvos: 'tvOS', ios: 'iOS', android: 'Android' }[device];
+    assert.equal(response.headers.get('content-disposition'), `attachment; filename=${label}-kakamlab.yaml`);
     const config = YAML.parse(await response.text());
     const regionGroup = config['proxy-groups'].find((group) => group.name === 'US 美国自动');
     assert.equal(regionGroup.icon, base + '/icons/us.png');
