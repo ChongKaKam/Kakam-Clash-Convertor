@@ -1,0 +1,19 @@
+{
+  "name": "clash-subscription-converter",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-hosted Clash/Mihomo subscription manager and device profile converter",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test",
+    "check": "node --check src/server.js && node --check src/converter.js && node --check src/icons.js && node --check src/latency.js && node --check public/app.js && node --check public/explorer.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "yaml": "^2.8.1"
+  }
+}

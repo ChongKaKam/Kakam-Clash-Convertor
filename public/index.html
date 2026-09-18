@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Clash 订阅转换器</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div><span class="eyebrow">SELF-HOSTED</span><h1>订阅中转站</h1></div>
+      <p>一个入口，三套设备配置。只留下 <code>pro-*</code> 与 <code>直连-*</code> 的港台美日节点。</p>
+    </header>
+
+    <section class="panel auth-panel">
+      <label>管理令牌<input id="token" type="password" autocomplete="current-password" placeholder="ADMIN_TOKEN"></label>
+      <button id="connect" class="secondary">连接</button>
+      <span id="status" class="status">尚未连接</span>
+    </section>
+
+    <section class="panel">
+      <div class="section-title"><div><span class="step">01</span><h2>添加上游订阅</h2></div><span>地址仅保存在你的服务器</span></div>
+      <form id="create-form">
+        <label>名称<input id="name" required maxlength="100" placeholder="例如：SSONE"></label>
+        <label class="grow">订阅 URL<input id="url" required type="url" placeholder="https://example.com/subscribe?token=…"></label>
+        <label class="checkbox"><input id="upstream-rules" type="checkbox" checked> 合并上游规则</label>
+        <button type="submit">添加并拉取</button>
+      </form>
+    </section>
+
+    <section class="panel whitelist-panel">
+      <div class="section-title"><div><span class="step">02</span><h2>DIRECT 白名单</h2></div><span>所有订阅 · 最高优先级</span></div>
+      <p class="help">每行一个域名、IP 或网段。域名默认包含子域名；精确域名可写 DOMAIN,example.com。匹配后强制直连，优先于广告拦截和所有分流组。</p>
+      <form id="whitelist-form">
+        <label for="direct-whitelist">直连条目<textarea id="direct-whitelist" rows="6" spellcheck="false" placeholder="example.com&#10;DOMAIN,api.example.com&#10;192.168.0.0/16&#10;IP-CIDR6,fd00::/8" disabled></textarea></label>
+        <div class="whitelist-actions"><button id="save-whitelist" type="submit" disabled>保存白名单</button><span id="whitelist-status" role="status">连接后可编辑</span></div>
+      </form>
+      <p class="help">保存后无需刷新上游。在客户端更新现有订阅，即可获取新规则；订阅链接保持不变。</p>
+    </section>
+
+    <section>
+      <div class="section-title list-title"><div><span class="step">03</span><h2>设备订阅</h2></div><span id="count">0 个订阅</span></div>
+      <p class="help">各服务组可在客户端选择地区自动组、具体节点或 DIRECT。“直连-*”是代理节点名称，与 DIRECT 本地直连不同。tvOS 输出自动排除 Mieru 节点。</p>
+      <div id="empty" class="empty">还没有订阅。添加一个上游地址开始转换。</div>
+      <div id="list" class="cards"></div>
+    </section>
+  </main>
+  <template id="card-template">
+    <article class="card">
+      <div class="card-head"><div><h3></h3><p class="meta"></p></div><span class="health"></span></div>
+      <div class="stats"></div>
+      <div class="links"></div>
+      <div class="actions"><button data-action="refresh" class="secondary">刷新上游</button><button data-action="rotate" class="secondary">更换链接令牌</button><button data-action="delete" class="danger">删除</button></div>
+      <p class="error"></p>
+      <div class="explorer-host"></div>
+    </article>
+  </template>
+  <div id="toast" role="status"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
