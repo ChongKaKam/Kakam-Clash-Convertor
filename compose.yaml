@@ -10,7 +10,7 @@ services:
       ALLOW_PRIVATE_UPSTREAMS: ${ALLOW_PRIVATE_UPSTREAMS:-false}
       LATENCY_TIMEOUT_MS: ${LATENCY_TIMEOUT_MS:-5000}
     ports:
-      - "${PORT:-8080}:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - clash-converter-data:/data
 
