@@ -65,9 +65,10 @@ test('first-match rules send AI, streaming and mail ahead of broader company dom
   ]) assert.equal(domainRoute(config, host), group, host);
 });
 
-test('all eleven Apple login domains route before generic iCloud, Apple and CDN rules', () => {
+test('all Apple Intelligence domains route before generic OpenAI, iCloud, Apple and CDN rules', () => {
   const config = output('ios');
-  assert.equal(APPLE_INTELLIGENCE_DOMAINS.length, 11);
+  assert.equal(APPLE_INTELLIGENCE_DOMAINS.length, 12);
+  assert.ok(APPLE_INTELLIGENCE_DOMAINS.includes('ios.chat.openai.com'));
   for (const domain of APPLE_INTELLIGENCE_DOMAINS) {
     assert.equal(domainRoute(config, domain), GROUP.intelligence, domain);
     assert.equal(domainRoute(config, `test.${domain}`), GROUP.intelligence, domain);

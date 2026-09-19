@@ -21,7 +21,7 @@
 - 管理 API 使用 Bearer Token；设备订阅使用独立的高熵公开令牌，可随时轮换。
 - 阻止本机/内网上游地址，并提供响应大小限制、拉取超时、重定向复检、原子化持久化。
 
-> Apple-智能包含 `gateway.icloud.com`、`apple-relay.apple.com`、`apple-relay.fastly-edge.com`、`apple-relay.cloudflare.com`、`guzzoni.apple.com`、`cp4.cloudflare.com`、`gspe1-ssl.ls.apple.com`、`smoot.apple.com`、`apple-relay.akamaized.net`、`apple-relay.mask.apple-dns.net`、`aapps.mzstatic.com`，优先于普通 Apple/iCloud 规则。三端共用这些规则，iOS 可使用它们处理 Apple ChatGPT 登录流量。普通 ChatGPT 流量走 AI 平台组；两组默认同为美国自动。
+> Apple-智能包含 `ios.chat.openai.com`、`gateway.icloud.com`、`apple-relay.apple.com`、`apple-relay.fastly-edge.com`、`apple-relay.cloudflare.com`、`guzzoni.apple.com`、`cp4.cloudflare.com`、`gspe1-ssl.ls.apple.com`、`smoot.apple.com`、`apple-relay.akamaized.net`、`apple-relay.mask.apple-dns.net`、`aapps.mzstatic.com`，优先于普通 OpenAI/Apple/iCloud 规则。三端共用这些规则，iOS 可使用它们处理 Apple ChatGPT 登录流量。其他 ChatGPT 流量走 AI 平台组；两组默认同为美国自动。
 
 规则目录在 `src/routing.js`，设备与节点设置在 `src/converter.js`。Apple/AI 域名和地域可用性会变化，规则匹配不等于承诺账号可登录。
 
