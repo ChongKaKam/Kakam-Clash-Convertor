@@ -98,6 +98,10 @@ test('authenticated whitelist survives restart and immediately changes existing 
     assert.equal(regionGroup.icon, base + '/icons/us.png');
     assert.deepEqual(config.rules.slice(0, 3), ['DOMAIN-SUFFIX,chatgpt.com,DIRECT', 'DOMAIN-SUFFIX,gateway.icloud.com,DIRECT', 'IP-CIDR,192.0.2.0/24,DIRECT']);
     assert.equal(config.proxies.some((p) => p.type === 'mieru'), device !== 'tvos');
+    if (device !== 'tvos') {
+      const mieru = config.proxies.find((p) => p.type === 'mieru');
+      assert.equal(mieru.udp, true);
+    }
   }
   const invalid = await api('/api/settings', 'PUT', { directWhitelist: ['DOMAIN,example.com,REJECT'] });
   assert.equal(invalid.status, 400);

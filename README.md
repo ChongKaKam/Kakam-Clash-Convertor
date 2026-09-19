@@ -6,7 +6,7 @@
 
 - 支持 Clash/Mihomo YAML，以及常见 Base64/URI 节点订阅（SS、VMess、VLESS、Trojan、Hysteria2、TUIC）。
 - 香港、台湾、美国、日本独立 `url-test` 自动测速组；没有节点的地区不会生成空策略组。
-- 新增 `🌈 AI 自动`，仅包含名称以 `直连-美国` 开头且兼容当前设备的节点（不含 `pro-*`、其他地区或 `DIRECT`）。AI 平台和 Apple-智能均可选择它，原有默认选项保持不变。若过滤后无符合节点，则省略该组及选项，避免空组；例如 tvOS 会先排除 Mieru。
+- 新增 `🌈 AI 自动`，仅包含名称以 `直连-美国` 开头且兼容当前设备的节点（不含 `pro-*`、其他地区或 `DIRECT`）。AI 平台、Apple-智能、iCloud 和苹果服务均可选择它，原有默认选项保持不变。若过滤后无符合节点，则省略该组及选项，避免空组；例如 tvOS 会先排除 Mieru。
 - 地区使用服务自带 PNG 图标和 `HK/TW/US/JP` 文字标识，不依赖系统旗帜 Emoji 字体；生成的配置带有对应 `icon` URL。
 - 网页按设备可视化展示地区组、服务组、配置默认策略和过滤后的节点，支持按组筛选、名称/协议搜索、延迟排序。
 - 网页可通过独立 Mihomo 内核实测过滤后节点的 HTTP 延迟，展示进度、成功/失败和测试时间。
@@ -16,7 +16,7 @@
 - tvOS/Android 接入 [Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules) 的 9 个基础规则集；iOS 使用 MetaCubeX 的 10 个二进制 MRS 规则集以降低启动内存。客户端每 24 小时更新。Google 基础集仅覆盖可在大陆直连的部分域名，完整服务分组由内置域名和上游规则补充。
 - 合并上游自包含域名/IP 规则时按服务映射策略组，并按域名具体程度排序，确保邮件、AI、YouTube API 等先于 Google/微软大类匹配。没有对应组的规则映射到“漏网之鱼”。
 - 网页可编辑全局 DIRECT 白名单，匹配时强制直连，优先于所有分组和广告规则。持久化到 `/data/settings.json`，保存后下一次下载同一订阅链接即可生效。
-- tvOS 在生成策略组之前排除 `mieru` 节点；过滤后无节点的地区不生成空组，全部无可用节点则返回明确的 HTTP 422 错误。iOS、Android 保留 Mieru。
+- tvOS 在生成策略组之前排除 `mieru` 节点；过滤后无节点的地区不生成空组，全部无可用节点则返回明确的 HTTP 422 错误。iOS、Android 保留 Mieru；当上游未声明 UDP 能力时补充 `udp: true`，使 Apple Private Relay 等 UDP/QUIC 流量能够经过所选 Mieru 节点。上游明确设置 `udp: false` 时保持原值。
 - 三套设备预设：tvOS 关闭 TUN/嗅探，iOS 关闭 TUN、启用保守嗅探，Android 启用 TUN/DNS 劫持与完整嗅探。
 - 管理 API 使用 Bearer Token；设备订阅使用独立的高熵公开令牌，可随时轮换。
 - 阻止本机/内网上游地址，并提供响应大小限制、拉取超时、重定向复检、原子化持久化。
