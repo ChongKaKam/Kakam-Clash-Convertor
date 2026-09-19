@@ -118,6 +118,36 @@ test('service categories still exist with upstream merging disabled', () => {
   assert.equal(domainRoute(config, 'grok.com'), GROUP.ai);
 });
 
+test('iOS loads binary MRS rule sets without YAML parsing or a full GeoIP database', () => {
+  const config = output('ios');
+  const providers = config['rule-providers'];
+  assert.equal(Object.keys(providers).length, 10);
+  for (const [name, provider] of Object.entries(providers)) {
+    assert.match(name, /^mobile-/);
+    assert.equal(provider.format, 'mrs');
+    assert.match(provider.path, /^\.\/ruleset\/mobile-.*\.mrs$/);
+    assert.match(provider.url, /^https:\/\/cdn\.jsdelivr\.net\/gh\/MetaCubeX\/meta-rules-dat@meta\/geo\/(geosite|geoip)\/.+\.mrs$/);
+    assert.equal(provider.behavior, name.endsWith('cidr') ? 'ipcidr' : 'domain');
+  }
+  assert.ok(!config.rules.some(rule => /^(GEOSITE|GEOIP|IP-ASN),/.test(rule)));
+  assert.ok(config.rules.includes(`RULE-SET,mobile-jpcidr,${GROUP.japan},no-resolve`));
+  assert.ok(config.rules.includes(`RULE-SET,mobile-reject,${GROUP.ads}`));
+  assert.ok(config.rules.includes('RULE-SET,mobile-direct,DIRECT'));
+  assert.equal(domainRoute(config, 'chatgpt.com'), GROUP.ai);
+  assert.equal(domainRoute(config, 'gateway.icloud.com'), GROUP.intelligence);
+});
+
+test('mobile compatibility changes do not change tvOS/Android rules or selected node credentials', () => {
+  for (const device of ['tvos', 'android']) {
+    const config = output(device);
+    assert.equal(Object.keys(config['rule-providers']).length, 9);
+    assert.ok(Object.values(config['rule-providers']).every(p => p.format === 'yaml' && p.url.includes('Loyalsoldier')));
+    assert.ok(config.rules.includes(`GEOIP,JP,${GROUP.japan},no-resolve`));
+  }
+  assert.deepEqual(output('ios').proxies, output('android').proxies);
+  assert.deepEqual(output('ios')['proxy-groups'], output('android')['proxy-groups']);
+});
+
 test('whitelist normalization validates predicates and rejects policy injection', () => {
   assert.deepEqual(normalizeDirectWhitelist('EXAMPLE.com\n\nDOMAIN, api.example.com, DIRECT\n192.0.2.1\n2001:db8::/32\nexample.com'), [
     'DOMAIN-SUFFIX,example.com', 'DOMAIN,api.example.com', 'IP-CIDR,192.0.2.1/32', 'IP-CIDR6,2001:db8::/32',

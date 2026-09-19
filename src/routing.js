@@ -51,7 +51,24 @@ const DOMAINS = {
   google: ['google.com', 'googleapis.com', 'googleusercontent.com', 'gstatic.com', 'gvt1.com', 'gvt2.com', 'gvt0.com', 'gvt3.com', 'gvt6.com', 'google.co.jp', 'google.com.hk', 'google.com.tw', 'google.co.uk', 'google.de', 'google.fr', 'googlevideo.com', 'android.com', 'g.co', 'services.googleapis.cn'],
 };
 
-export function ruleProviders() {
+// iOS Network Extensions have a tight memory budget. MRS loads compiled tries
+// directly instead of expanding hundreds of thousands of YAML strings at startup.
+// These are MetaCubeX categories, not byte-for-byte copies of Loyalsoldier lists.
+const MOBILE_RULES = {
+  reject: 'geosite/category-ads-all', icloud: 'geosite/icloud',
+  apple: 'geosite/apple', google: 'geosite/google@cn',
+  proxy: 'geosite/geolocation-!cn', direct: 'geosite/cn', private: 'geosite/private',
+  lancidr: 'geoip/private', cncidr: 'geoip/cn', jpcidr: 'geoip/jp',
+};
+
+export function ruleProviders(device = 'android') {
+  if (device === 'ios') return Object.fromEntries(Object.entries(MOBILE_RULES).map(([name, resource]) => [
+    `mobile-${name}`, {
+      type: 'http', behavior: name.endsWith('cidr') ? 'ipcidr' : 'domain', format: 'mrs',
+      url: `https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/${resource}.mrs`,
+      path: `./ruleset/mobile-${name}.mrs`, interval: 86400,
+    },
+  ]));
   return Object.fromEntries(['reject', 'icloud', 'apple', 'google', 'proxy', 'direct', 'private', 'lancidr', 'cncidr'].map((name) => [
     `loyal-${name}`, {
       type: 'http', behavior: name.endsWith('cidr') ? 'ipcidr' : 'domain', format: 'yaml',
@@ -117,7 +134,7 @@ export function routingRules(source, options) {
     return type === 'DOMAIN' || type === 'DOMAIN-SUFFIX' ? value.split('.').length * 2 + (type === 'DOMAIN' ? 1 : 0) : 0;
   };
   serviceRules.sort((a, b) => rank(b) - rank(a));
-  return [
+  const rules = [
     ...options.directRules,
     ...intelligence,
     'RULE-SET,loyal-private,DIRECT',
@@ -134,4 +151,8 @@ export function routingRules(source, options) {
     `GEOIP,JP,${GROUP.japan},no-resolve`,
     `MATCH,${GROUP.final}`,
   ];
+  if (options.device !== 'ios') return rules;
+  return rules.map((rule) => rule === `GEOIP,JP,${GROUP.japan},no-resolve`
+    ? `RULE-SET,mobile-jpcidr,${GROUP.japan},no-resolve`
+    : rule.replace(/^RULE-SET,loyal-/, 'RULE-SET,mobile-'));
 }

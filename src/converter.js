@@ -107,7 +107,7 @@ export function buildSubscription(text, device = 'android', options = {}) {
     serviceGroup('microsoft', ['DIRECT']), serviceGroup('domestic', ['DIRECT']),
     serviceGroup('final'), serviceGroup('ads', ['REJECT', 'DIRECT']),
   ];
-  const rules = routingRules(source, { ...options, directRules: directWhitelistRules(options.directWhitelist) });
+  const rules = routingRules(source, { ...options, device, directRules: directWhitelistRules(options.directWhitelist) });
   if (options.publicBaseUrl) {
     for (const group of groups) {
       const region = REGIONS.find((region) => region.name === group.name)?.key || (group.name === GROUP.japan ? 'jp' : null);
@@ -115,7 +115,7 @@ export function buildSubscription(text, device = 'android', options = {}) {
     }
   }
 
-  return { ...BASE, ...deviceSettings(device), proxies, 'proxy-groups': groups, 'rule-providers': ruleProviders(), rules };
+  return { ...BASE, ...deviceSettings(device), proxies, 'proxy-groups': groups, 'rule-providers': ruleProviders(device), rules };
 }
 
 export function convertSubscription(text, device = 'android', options = {}) {

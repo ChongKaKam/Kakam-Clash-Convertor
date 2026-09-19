@@ -13,7 +13,7 @@
 - 服务分组：海外 AI、Apple-智能、YouTube、Netflix、HBO、Disney+、Prime Video、Google、邮件、日本区域、iCloud、苹果服务、微软服务、国内流媒体、漏网之鱼、广告拦截。
 - 每个服务组均可选择地区自动组、单个节点和 `DIRECT`。`直连-*` 是机场代理节点，`DIRECT` 才表示本地直连。
 - AI 和 Apple-智能默认优先美国自动；日本区域默认日本自动；iCloud、苹果、微软、国内流媒体默认 `DIRECT`；广告组默认 `REJECT`，可切换为 `DIRECT`。
-- 接入 [Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules) 的 9 个基础规则集，客户端每 24 小时更新。`google.txt` 仅是 Google 可在大陆直连的部分域名，完整服务分组由内置域名和上游规则补充。
+- tvOS/Android 接入 [Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules) 的 9 个基础规则集；iOS 使用 MetaCubeX 的 10 个二进制 MRS 规则集以降低启动内存。客户端每 24 小时更新。Google 基础集仅覆盖可在大陆直连的部分域名，完整服务分组由内置域名和上游规则补充。
 - 合并上游自包含域名/IP 规则时按服务映射策略组，并按域名具体程度排序，确保邮件、AI、YouTube API 等先于 Google/微软大类匹配。没有对应组的规则映射到“漏网之鱼”。
 - 网页可编辑全局 DIRECT 白名单，匹配时强制直连，优先于所有分组和广告规则。持久化到 `/data/settings.json`，保存后下一次下载同一订阅链接即可生效。
 - tvOS 在生成策略组之前排除 `mieru` 节点；过滤后无节点的地区不生成空组，全部无可用节点则返回明确的 HTTP 422 错误。iOS、Android 保留 Mieru。
@@ -42,9 +42,25 @@ IP-CIDR6,fd00::/8
 
 ## 规则集与客户端兼容
 
-使用 [Stash 文档支持的 YAML rule-providers](https://stash.wiki/rules/rule-set)，规则集由设备从 jsDelivr 拉取；首次导入需要设备能够访问这些 URL。代理节点凭据不会发送给规则集提供方。规则列表采用内置域名，不生成 `GEOSITE,category-ai-!cn` 或 `GEOSITE,category-ai-cn`。
+订阅文件本身始终是 **Clash YAML**，不是 sing-box JSON。tvOS/Android 使用 [Stash 文档支持的 YAML rule-providers](https://stash.wiki/rules/rule-set)；iOS 面向 Clash Mi/Mihomo，使用其支持的二进制 `format: mrs` 规则文件（并非把订阅改成另一种格式）。规则集由设备从 jsDelivr 拉取；首次导入需要设备能够访问这些 URL。代理节点凭据不会发送给规则集提供方。规则列表采用内置域名，不生成 `GEOSITE,category-ai-!cn` 或 `GEOSITE,category-ai-cn`。
 
-上游 `GEOSITE`、`RULE-SET`、逻辑/进程规则不直接继承，避免依赖未携带的数据库或 provider；其中通用国内、代理、广告分类由 Loyalsoldier 集替代。日本 IP 回退使用客户端 GeoIP 数据库。此服务输出 Clash/Mihomo 风格 YAML，不输出 Surge/Shadowrocket 原生格式；tvOS 目标是支持该格式的 Stash。
+上游 `GEOSITE`、`RULE-SET`、逻辑/进程规则不直接继承，避免依赖未携带的数据库或 provider。tvOS/Android 的日本 IP 回退使用客户端 GeoIP 数据库。iOS 改用单独的日本 IP MRS 集，不生成需要完整 GeoIP 数据库的规则。
+
+### Clash Mi（Mihomo 1.19.30）与 iOS 秒断
+
+[Clash Mi 官方 FAQ](https://clashmi.app/guide/faq) 提醒 iOS VPN 扩展有约 50 MB 内存限制，超限可能直接断开，并建议使用 MRS。原来的大体积 YAML provider 在解析时需要额外内存；桌面内核通过 `-t` 仅说明配置合法，不能证明 iOS VPN 能持续运行。
+
+iOS 基础集来自 [MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat)，对应广告、iCloud、Apple、Google 中国域名、海外域名、中国域名、私有域名、私有 IP、中国 IP、日本 IP。它们与 Loyalsoldier 列表不是逐条相同；原有显式服务域名、上游自包含规则、DIRECT 白名单及优先级不变，节点参数及 AI 自动组不变。iOS 的 TUN 生命周期由 Clash Mi 接管，不通过强开订阅内的 TUN 来解决内存问题。
+
+可选的真实内核启动检查（需自行提供可信的 Mihomo 1.19.30 可执行文件）：
+
+```bash
+CORE_BIN=/absolute/path/to/mihomo SOURCE_FILE=/absolute/path/to/source.yaml node scripts/verify-ios-core.mjs
+```
+
+检查会下载公开规则，在临时目录分别启动旧版 YAML / 新版 MRS 配置，确认所有 provider 已载入，输出采样 RSS。为隔离规则开销，两组均关闭 TUN、DNS、嗅探、代理监听和节点自动测速；不会测试节点连通性或上传订阅。macOS/Linux RSS 不能当作 iPhone 内存实测，也不替代手机 VPN 验证。
+
+更新服务后，在 Clash Mi 更新原有 **iOS 订阅链接**即可取得新配置，无需更换令牌或改用节点-only订阅。远端服务需先部署本次代码更新，单独更新本机不会改变远端输出。
 
 ## Docker 部署
 
