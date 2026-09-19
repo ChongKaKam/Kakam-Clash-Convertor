@@ -9,7 +9,7 @@
     "dev": "node --env-file=.env.local --watch src/server.js",
     "start:local": "node --env-file=.env.local src/server.js",
     "test": "node --test",
-    "check": "node --check src/server.js && node --check src/converter.js && node --check src/icons.js && node --check src/latency.js && node --check public/app.js && node --check public/explorer.js && node --check public/urls.js"
+    "check": "node --check src/server.js && node --check src/converter.js && node --check src/icons.js && node --check src/latency.js && node --check public/app.js && node --check public/explorer.js"
   },
   "engines": {
     "node": ">=22"

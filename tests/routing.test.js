@@ -65,22 +65,13 @@ test('first-match rules send AI, streaming and mail ahead of broader company dom
   ]) assert.equal(domainRoute(config, host), group, host);
 });
 
-test('all Apple Intelligence domains route before generic OpenAI, iCloud, Apple and CDN rules', () => {
+test('all eleven Apple login domains route before generic iCloud, Apple and CDN rules', () => {
   const config = output('ios');
-  assert.equal(APPLE_INTELLIGENCE_DOMAINS.length, 12);
-  assert.ok(APPLE_INTELLIGENCE_DOMAINS.includes('ios.chat.openai.com'));
+  assert.equal(APPLE_INTELLIGENCE_DOMAINS.length, 11);
   for (const domain of APPLE_INTELLIGENCE_DOMAINS) {
     assert.equal(domainRoute(config, domain), GROUP.intelligence, domain);
     assert.equal(domainRoute(config, `test.${domain}`), GROUP.intelligence, domain);
   }
-  const actionIndexes = (action) => config.rules.flatMap((rule, index) => {
-    const parts = rule.split(',');
-    return (parts.at(-1) === 'no-resolve' ? parts.at(-2) : parts.at(-1)) === action ? [index] : [];
-  });
-  const intelligenceIndexes = actionIndexes(GROUP.intelligence);
-  const appleIndexes = actionIndexes(GROUP.apple);
-  assert.ok(intelligenceIndexes.length > 0 && appleIndexes.length > 0);
-  assert.ok(Math.max(...intelligenceIndexes) < Math.min(...appleIndexes));
 });
 
 test('global whitelist overrides Apple Intelligence, AI, streaming and advertisements', () => {

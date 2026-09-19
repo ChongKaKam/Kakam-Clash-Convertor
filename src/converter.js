@@ -12,8 +12,6 @@ export const REGIONS = [
 ];
 
 export const AI_AUTO_GROUP = '🌈 AI 自动';
-export const APPLE_INTELLIGENCE_AUTO_GROUP = '🍎 Apple智能自动';
-const AI_AUTO_SERVICE_GROUPS = new Set(['ai', 'intelligence', 'icloud', 'apple']);
 
 const BASE = {
   'mixed-port': 7890,
@@ -63,22 +61,11 @@ function eligible(proxy) {
   return /^(pro-|直连-)/i.test(name) && REGIONS.some(({ pattern }) => pattern.test(name));
 }
 
-function deviceCompatibleProxy(proxy, device) {
-  if (device !== 'tvos' && String(proxy.type).toLowerCase() === 'mieru' && proxy.udp == null) {
-    // Mihomo defaults the common `udp` capability to false. Mieru can carry
-    // SOCKS5 UDP Associate over its configured transport, but only when this
-    // flag is enabled. Preserve an explicit upstream `udp: false`.
-    return { ...proxy, udp: true };
-  }
-  return proxy;
-}
-
 export function buildSubscription(text, device = 'android', options = {}) {
   if (!['tvos', 'ios', 'android'].includes(device)) throw new HttpError(400, '设备必须是 tvos、ios 或 android');
   const source = parseSubscription(text);
   const proxies = uniqueNames(source.proxies.filter((proxy) => eligible(proxy) &&
-    !(device === 'tvos' && String(proxy.type).toLowerCase() === 'mieru'))
-    .map((proxy) => deviceCompatibleProxy(proxy, device)));
+    !(device === 'tvos' && String(proxy.type).toLowerCase() === 'mieru')));
   if (!proxies.length) throw new HttpError(422, device === 'tvos'
     ? 'tvOS 过滤 Mieru 后没有可用的港台美日 pro-* / 直连-* 节点'
     : '订阅中没有匹配 pro-* 或 直连-* 且属于香港、台湾、美国、日本的节点');
@@ -100,25 +87,19 @@ export function buildSubscription(text, device = 'android', options = {}) {
     name: AI_AUTO_GROUP, type: 'url-test', proxies: aiNames,
     url: 'https://www.gstatic.com/generate_204', interval: 300, tolerance: 80, lazy: true,
   } : null;
-  const appleIntelligenceAuto = aiNames.length ? {
-    name: APPLE_INTELLIGENCE_AUTO_GROUP, type: 'url-test', proxies: aiNames,
-    url: 'https://ios.chat.openai.com/', 'expected-status': 403,
-    interval: 300, tolerance: 80, lazy: true,
-  } : null;
   const preferred = (key) => regionNames[key].length ? REGIONS.find((region) => region.key === key).name : undefined;
   const compact = (values) => [...new Set(values.filter(Boolean))];
 
   const serviceGroup = (key, first = []) => ({
     name: GROUP[key], type: 'select',
-    proxies: compact([...first, ...(AI_AUTO_SERVICE_GROUPS.has(key) && aiAuto ? [aiAuto.name] : []), '🚀 节点选择', ...autoNames, 'DIRECT', ...allNames]),
+    proxies: compact([...first, ...(['ai', 'intelligence'].includes(key) && aiAuto ? [aiAuto.name] : []), '🚀 节点选择', ...autoNames, 'DIRECT', ...allNames]),
   });
   const groups = [
     { name: '🚀 节点选择', type: 'select', proxies: compact([...autoNames, ...allNames, 'DIRECT']) },
     ...autoGroups,
     ...(aiAuto ? [aiAuto] : []),
-    ...(appleIntelligenceAuto ? [appleIntelligenceAuto] : []),
-    serviceGroup('ai', [aiAuto?.name, appleIntelligenceAuto?.name, preferred('us'), preferred('tw'), preferred('jp')]),
-    serviceGroup('intelligence', [appleIntelligenceAuto?.name, aiAuto?.name, preferred('us'), preferred('jp'), preferred('tw')]),
+    serviceGroup('ai', [preferred('us'), preferred('tw'), preferred('jp')]),
+    serviceGroup('intelligence', [preferred('us'), preferred('jp'), preferred('tw')]),
     serviceGroup('youtube'), serviceGroup('netflix'), serviceGroup('hbo', [preferred('us')]),
     serviceGroup('disney'), serviceGroup('prime'), serviceGroup('google'), serviceGroup('mail'),
     serviceGroup('japan', [preferred('jp')]),

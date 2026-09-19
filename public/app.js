@@ -1,5 +1,4 @@
 import { mountExplorer } from './explorer.js';
-import { profileUrl } from './urls.js';
 
 const $ = (selector) => document.querySelector(selector);
 const tokenInput = $('#token');
@@ -24,6 +23,8 @@ async function request(path, options = {}) {
   return response.status === 204 ? null : response.json();
 }
 
+function profileUrl(item, device) { return `${state.baseUrl}/sub/${item.publicToken}/${device}.yaml`; }
+
 function render() {
   for (const dispose of disposeExplorers) dispose();
   disposeExplorers = [];
@@ -40,7 +41,7 @@ function render() {
     card.querySelector('.stats').innerHTML = `<span class="stat">筛选节点 <strong>${summary.selectedCount}/${summary.proxyCount}</strong></span><span class="stat">上游规则 <strong>${summary.ruleCount}</strong></span><span class="stat">港台美日 <strong>${summary.regions?.hk||0} / ${summary.regions?.tw||0} / ${summary.regions?.us||0} / ${summary.regions?.jp||0}</strong></span>`;
     for (const [device, label] of [['tvos','tvOS'],['ios','iOS'],['android','Android']]) {
       const row = document.createElement('div'); row.className = 'device';
-      const url = profileUrl(state.baseUrl, item, device);
+      const url = profileUrl(item, device);
       row.innerHTML = `<span>${label}</span><input readonly aria-label="${label} 订阅链接"><button type="button" class="copy" aria-label="复制 ${label} 订阅链接"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M12 4V3H3v9h1"/></svg>copy</button>`;
       row.querySelector('input').value = url;
       row.querySelector('.copy').onclick = async () => {

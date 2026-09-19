@@ -9,7 +9,7 @@ export const GROUP = Object.freeze({
 });
 
 export const APPLE_INTELLIGENCE_DOMAINS = [
-  'ios.chat.openai.com', 'gateway.icloud.com', 'apple-relay.apple.com', 'apple-relay.fastly-edge.com',
+  'gateway.icloud.com', 'apple-relay.apple.com', 'apple-relay.fastly-edge.com',
   'apple-relay.cloudflare.com', 'guzzoni.apple.com', 'cp4.cloudflare.com',
   'gspe1-ssl.ls.apple.com', 'smoot.apple.com', 'apple-relay.akamaized.net',
   'apple-relay.mask.apple-dns.net', 'aapps.mzstatic.com',
