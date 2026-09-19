@@ -11,11 +11,12 @@ const source = YAML.stringify({
     { name: '直连-日本01', type: 'trojan', server: 'jp.example.com', port: 443, password: 'test' },
     { name: 'pro-台湾01', type: 'mieru', server: 'tw.example.com', port: 443, username: 'test', password: 'test' },
   ],
-  'proxy-groups': ['🧲 AI', '🔎 Google', '📪 邮件服务', '🎬 HBOGO', '🎬 日本媒体', '🛡 广告拦截'].map((name) => ({ name, type: 'select', proxies: ['DIRECT'] })),
+  'proxy-groups': ['🧲 AI', '🎵 Spotify', '🔎 Google', '📪 邮件服务', '🎬 HBOGO', '🎬 日本媒体', '🛡 广告拦截'].map((name) => ({ name, type: 'select', proxies: ['DIRECT'] })),
   rules: [
     'DOMAIN-SUFFIX,mail.custom.example,📪 邮件服务',
     'DOMAIN-SUFFIX,custom.example,🔎 Google',
     'DOMAIN-SUFFIX,inherited-ai.example,🧲 AI',
+    'DOMAIN-SUFFIX,spotify-custom.example,🎵 Spotify',
     'DOMAIN-SUFFIX,inherited-hbo.example,🎬 HBOGO',
     'DOMAIN-SUFFIX,inherited-jp.example,🎬 日本媒体',
     'DOMAIN-SUFFIX,ads.example,🛡 广告拦截',
@@ -30,7 +31,9 @@ const output = (device = 'ios', options = {}) => YAML.parse(convertSubscription(
 function domainRoute(config, host) {
   return config.rules.find((rule) => {
     const [type, value] = rule.split(',');
-    return type === 'DOMAIN' ? host === value : type === 'DOMAIN-SUFFIX' ? host === value || host.endsWith(`.${value}`) : false;
+    return type === 'DOMAIN' ? host === value
+      : type === 'DOMAIN-SUFFIX' ? host === value || host.endsWith(`.${value}`)
+        : type === 'DOMAIN-KEYWORD' ? host.includes(value) : false;
   })?.split(',')[2];
 }
 
@@ -40,9 +43,14 @@ test('service groups have independent selections including DIRECT and individual
     const group = config['proxy-groups'].find((item) => item.name === name);
     assert.ok(group, name);
     assert.ok(group.proxies.includes('DIRECT'), name);
-    assert.ok(group.proxies.includes('直连-日本01'), name);
     assert.ok(group.proxies.includes('US 美国自动'), name);
+    if (name === GROUP.spotify) {
+      assert.ok(!group.proxies.includes('直连-日本01'), name);
+    } else {
+      assert.ok(group.proxies.includes('直连-日本01'), name);
+    }
   }
+  // This fixture has no direct-US node, so AI safely falls back to the US regional group.
   assert.equal(config['proxy-groups'].find((g) => g.name === GROUP.ai).proxies[0], 'US 美国自动');
   assert.equal(config['proxy-groups'].find((g) => g.name === GROUP.japan).proxies[0], 'JP 日本自动');
   assert.equal(config['proxy-groups'].find((g) => g.name === GROUP.ads).proxies[0], 'REJECT');
@@ -57,6 +65,8 @@ test('first-match rules send AI, streaming and mail ahead of broader company dom
   for (const [host, group] of [
     ['youtubei.googleapis.com', GROUP.youtube], ['www.youtube.com', GROUP.youtube],
     ['www.netflix.com', GROUP.netflix], ['www.hbomax.com', GROUP.hbo], ['inherited-hbo.example', GROUP.hbo],
+    ['open.spotify.com', GROUP.spotify], ['audio-fa.scdn.co', GROUP.spotify],
+    ['spotify.map.fastly.net', GROUP.spotify], ['spotify-custom.example', GROUP.spotify],
     ['www.google.com', GROUP.google], ['mail.google.com', GROUP.mail], ['smtp.office365.com', GROUP.mail],
     ['mail.custom.example', GROUP.mail], ['mail.icloud.com', GROUP.mail],
     ['abema.tv', GROUP.japan], ['inherited-jp.example', GROUP.japan], ['example.jp', GROUP.japan],

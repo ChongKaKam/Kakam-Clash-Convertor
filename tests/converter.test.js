@@ -43,7 +43,7 @@ test('summarizes selected nodes by region', () => {
   });
 });
 
-test('AI auto contains only direct-US nodes after device filtering and is offered to both AI groups', () => {
+test('AI auto contains only direct-US nodes and is the AI and GLOBAL default', () => {
   const input = YAML.stringify({ proxies: [
     { name: '直连-美国01', type: 'mieru' },
     { name: '直连-美国02', type: 'trojan' },
@@ -61,8 +61,13 @@ test('AI auto contains only direct-US nodes after device filtering and is offere
     for (const name of ['🤖 AI 平台', '🍎 Apple-智能']) {
       const group = groups.find(g => g.name === name);
       assert.ok(group.proxies.includes(ai.name));
-      assert.equal(group.proxies[0], 'US 美国自动');
     }
+    const aiPlatform = groups.find(g => g.name === '🤖 AI 平台');
+    assert.equal(aiPlatform.proxies[0], ai.name);
+    assert.equal(aiPlatform['default-selected'], ai.name);
+    const global = groups.find(g => g.name === 'GLOBAL');
+    assert.equal(global.proxies[0], ai.name);
+    assert.equal(global['default-selected'], ai.name);
     assert.ok(!groups.find(g => g.name === '🔎 Google').proxies.includes(ai.name));
     assert.deepEqual(subscriptionPreview(config, device).groups.find(g => g.name === ai.name).members, ai.proxies);
   }
@@ -74,4 +79,13 @@ test('AI auto is omitted without eligible nodes and never falls back to DIRECT o
   ] });
   const groups = buildSubscription(input, 'tvos')['proxy-groups'];
   assert.ok(!groups.some(g => g.name === '🌈 AI 自动' || g.proxies.includes('🌈 AI 自动')));
+  const global = groups.find(g => g.name === 'GLOBAL');
+  assert.equal(global.proxies[0], '🚀 节点选择');
+  assert.equal(global['default-selected'], undefined);
+});
+
+test('Spotify offers regional automatic groups and DIRECT without individual nodes', () => {
+  const config = buildSubscription(source, 'android');
+  const spotify = config['proxy-groups'].find(g => g.name === '🎵 Spotify');
+  assert.deepEqual(spotify.proxies, ['HK 香港自动', 'US 美国自动', 'JP 日本自动', 'DIRECT']);
 });

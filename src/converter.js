@@ -94,18 +94,30 @@ export function buildSubscription(text, device = 'android', options = {}) {
     name: GROUP[key], type: 'select',
     proxies: compact([...first, ...(['ai', 'intelligence'].includes(key) && aiAuto ? [aiAuto.name] : []), '🚀 节点选择', ...autoNames, 'DIRECT', ...allNames]),
   });
-  const groups = [
-    { name: '🚀 节点选择', type: 'select', proxies: compact([...autoNames, ...allNames, 'DIRECT']) },
-    ...autoGroups,
-    ...(aiAuto ? [aiAuto] : []),
-    serviceGroup('ai', [preferred('us'), preferred('tw'), preferred('jp')]),
+  const serviceGroups = [
+    serviceGroup('ai', [aiAuto?.name, preferred('us'), preferred('tw'), preferred('jp')]),
     serviceGroup('intelligence', [preferred('us'), preferred('jp'), preferred('tw')]),
     serviceGroup('youtube'), serviceGroup('netflix'), serviceGroup('hbo', [preferred('us')]),
-    serviceGroup('disney'), serviceGroup('prime'), serviceGroup('google'), serviceGroup('mail'),
+    serviceGroup('disney'), serviceGroup('prime'),
+    { name: GROUP.spotify, type: 'select', proxies: compact([...autoNames, 'DIRECT']) },
+    serviceGroup('google'), serviceGroup('mail'),
     serviceGroup('japan', [preferred('jp')]),
     serviceGroup('icloud', ['DIRECT']), serviceGroup('apple', ['DIRECT']),
     serviceGroup('microsoft', ['DIRECT']), serviceGroup('domestic', ['DIRECT']),
     serviceGroup('final'), serviceGroup('ads', ['REJECT', 'DIRECT']),
+  ];
+  if (aiAuto) serviceGroups[0]['default-selected'] = aiAuto.name;
+  const globalGroup = {
+    name: 'GLOBAL', type: 'select',
+    proxies: compact([aiAuto?.name, '🚀 节点选择', ...autoNames, ...serviceGroups.map((group) => group.name), 'DIRECT', ...allNames]),
+    ...(aiAuto ? { 'default-selected': aiAuto.name } : {}),
+  };
+  const groups = [
+    { name: '🚀 节点选择', type: 'select', proxies: compact([...autoNames, ...allNames, 'DIRECT']) },
+    ...autoGroups,
+    ...(aiAuto ? [aiAuto] : []),
+    ...serviceGroups,
+    globalGroup,
   ];
   const rules = routingRules(source, { ...options, device, directRules: directWhitelistRules(options.directWhitelist) });
   if (options.publicBaseUrl) {

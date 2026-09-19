@@ -3,6 +3,7 @@
 export const GROUP = Object.freeze({
   ai: '🤖 AI 平台', intelligence: '🍎 Apple-智能', youtube: '🎬 YouTube',
   netflix: '🎬 Netflix', hbo: '🎬 HBO', disney: '🎬 Disney+', prime: '🎬 Prime Video',
+  spotify: '🎵 Spotify',
   google: '🔎 Google', mail: '📪 邮件服务', japan: 'JP 日本区域',
   icloud: '☁️ iCloud', apple: '🍎 苹果服务', microsoft: '🧩 微软服务',
   domestic: '📺 国内流媒体', final: '🐟 漏网之鱼', ads: '🛡 广告拦截',
@@ -35,6 +36,7 @@ const DOMAINS = {
   hbo: ['hbo.com', 'hbomax.com', 'max.com', 'hboasia.com', 'hbogo.com', 'hbogoasia.com', 'hbogoasia.hk', 'hbogoasia.tw', 'hbonow.com', 'hbo.map.fastly.net', 'hbo.com.edgesuite.net', 'hbomaxcdn.com', 'h264.io', 'discomax.com', 'maxgo.com'],
   disney: ['disneyplus.com', 'disney-plus.net', 'dssott.com', 'bamgrid.com', 'disneystreaming.com'],
   prime: ['primevideo.com', 'aiv-cdn.net', 'aiv-delivery.net', 'amazonvideo.com'],
+  spotify: ['spotify.com', 'spotifycdn.com', 'spotifycdn.net', 'scdn.co', 'pscdn.co', 'spoti.fi'],
   mail: [
     'mail.google.com', 'gmail.com', 'googlemail.com', 'gmail.googleapis.com',
     'outlook.com', 'outlook.office.com', 'outlook.office365.com', 'smtp.office365.com',
@@ -86,6 +88,7 @@ function targetFor(group) {
   if (/(HBO|\bMax\b)/i.test(group)) return GROUP.hbo;
   if (/Disney/i.test(group)) return GROUP.disney;
   if (/PrimeVideo|Prime Video/i.test(group)) return GROUP.prime;
+  if (/Spotify/i.test(group)) return GROUP.spotify;
   if (/(邮件|Mail)/i.test(group)) return GROUP.mail;
   if (/(日本|Japan)/i.test(group)) return GROUP.japan;
   if (/iCloud/i.test(group)) return GROUP.icloud;
@@ -118,7 +121,10 @@ function upstreamRules(source) {
 
 export function routingRules(source, options) {
   const intelligence = APPLE_INTELLIGENCE_DOMAINS.map((domain) => `DOMAIN-SUFFIX,${domain},${GROUP.intelligence}`);
-  const builtIn = Object.entries(DOMAINS).flatMap(([key, domains]) => domains.map((domain) => `DOMAIN-SUFFIX,${domain},${GROUP[key]}`));
+  const builtIn = [
+    ...Object.entries(DOMAINS).flatMap(([key, domains]) => domains.map((domain) => `DOMAIN-SUFFIX,${domain},${GROUP[key]}`)),
+    `DOMAIN-KEYWORD,spotify,${GROUP.spotify}`,
+  ];
   const inherited = options.includeUpstreamRules === false ? [] : upstreamRules(source);
   const unique = new Map();
   for (const rule of [...intelligence, ...builtIn, ...inherited]) {
