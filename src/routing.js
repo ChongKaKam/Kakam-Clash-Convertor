@@ -1,7 +1,7 @@
 // Service-specific rules take precedence over company-wide and country lists.
 // Base rule-set documentation: https://github.com/Loyalsoldier/clash-rules
 export const GROUP = Object.freeze({
-  ai: '🤖 AI 平台', intelligence: '🍎 Apple-智能', youtube: '🎬 YouTube',
+  ai: '🤖 AI 平台', youtube: '🎬 YouTube',
   netflix: '🎬 Netflix', hbo: '🎬 HBO', disney: '🎬 Disney+', prime: '🎬 Prime Video',
   spotify: '🎵 Spotify',
   google: '🔎 Google', mail: '📪 邮件服务', japan: 'JP 日本区域',
@@ -81,7 +81,7 @@ export function ruleProviders(device = 'android') {
 }
 
 function targetFor(group) {
-  if (/(Apple Intelligence|Apple-智能|苹果智能)/i.test(group)) return GROUP.intelligence;
+  if (/(Apple Intelligence|Apple-智能|苹果智能)/i.test(group)) return GROUP.ai;
   if (/(\bAI\b|人工智能|ChatGPT|Claude|Gemini|Grok|Perplexity)/i.test(group)) return GROUP.ai;
   if (/YouTube/i.test(group)) return GROUP.youtube;
   if (/Netflix/i.test(group)) return GROUP.netflix;
@@ -120,19 +120,19 @@ function upstreamRules(source) {
 }
 
 export function routingRules(source, options) {
-  const intelligence = APPLE_INTELLIGENCE_DOMAINS.map((domain) => `DOMAIN-SUFFIX,${domain},${GROUP.intelligence}`);
+  const appleIntelligenceRules = APPLE_INTELLIGENCE_DOMAINS.map((domain) => `DOMAIN-SUFFIX,${domain},${GROUP.ai}`);
   const builtIn = [
     ...Object.entries(DOMAINS).flatMap(([key, domains]) => domains.map((domain) => `DOMAIN-SUFFIX,${domain},${GROUP[key]}`)),
     `DOMAIN-KEYWORD,spotify,${GROUP.spotify}`,
   ];
   const inherited = options.includeUpstreamRules === false ? [] : upstreamRules(source);
   const unique = new Map();
-  for (const rule of [...intelligence, ...builtIn, ...inherited]) {
+  for (const rule of [...appleIntelligenceRules, ...builtIn, ...inherited]) {
     const [type, value] = rule.split(',');
     const identity = `${type},${value}`;
     if (!unique.has(identity)) unique.set(identity, rule);
   }
-  const serviceRules = [...unique.values()].filter((rule) => !intelligence.includes(rule));
+  const serviceRules = [...unique.values()].filter((rule) => !appleIntelligenceRules.includes(rule));
   // More specific domains first, so inherited mail/API/CDN rules are not shadowed
   // by google.com, apple.com, microsoft.com, etc. Exact beats suffix at equal depth.
   const rank = (rule) => {
@@ -142,7 +142,7 @@ export function routingRules(source, options) {
   serviceRules.sort((a, b) => rank(b) - rank(a));
   const rules = [
     ...options.directRules,
-    ...intelligence,
+    ...appleIntelligenceRules,
     'RULE-SET,loyal-private,DIRECT',
     `RULE-SET,loyal-reject,${GROUP.ads}`,
     ...serviceRules,

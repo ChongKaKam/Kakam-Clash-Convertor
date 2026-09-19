@@ -79,9 +79,10 @@ test('all eleven Apple login domains route before generic iCloud, Apple and CDN 
   const config = output('ios');
   assert.equal(APPLE_INTELLIGENCE_DOMAINS.length, 11);
   for (const domain of APPLE_INTELLIGENCE_DOMAINS) {
-    assert.equal(domainRoute(config, domain), GROUP.intelligence, domain);
-    assert.equal(domainRoute(config, `test.${domain}`), GROUP.intelligence, domain);
+    assert.equal(domainRoute(config, domain), GROUP.ai, domain);
+    assert.equal(domainRoute(config, `test.${domain}`), GROUP.ai, domain);
   }
+  assert.ok(!config['proxy-groups'].some(group => group.name === '🍎 Apple-智能'));
 });
 
 test('global whitelist overrides Apple Intelligence, AI, streaming and advertisements', () => {
@@ -144,7 +145,7 @@ test('iOS loads binary MRS rule sets without YAML parsing or a full GeoIP databa
   assert.ok(config.rules.includes(`RULE-SET,mobile-reject,${GROUP.ads}`));
   assert.ok(config.rules.includes('RULE-SET,mobile-direct,DIRECT'));
   assert.equal(domainRoute(config, 'chatgpt.com'), GROUP.ai);
-  assert.equal(domainRoute(config, 'gateway.icloud.com'), GROUP.intelligence);
+  assert.equal(domainRoute(config, 'gateway.icloud.com'), GROUP.ai);
 });
 
 test('mobile compatibility changes do not change tvOS/Android rules or selected node credentials', () => {

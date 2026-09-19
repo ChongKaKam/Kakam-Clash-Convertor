@@ -26,8 +26,8 @@ test('filters nodes and generates four-region auto groups', () => {
   assert.ok(!output['proxy-groups'].some((group) => group.name === 'TW 台湾自动'));
   assert.ok(output.rules.includes('DOMAIN,example.com,🐟 漏网之鱼'));
   assert.ok(output.rules.includes('DOMAIN-SUFFIX,example.cn,DIRECT'));
-  assert.ok(output.rules.includes('DOMAIN-SUFFIX,apple-relay.fastly-edge.com,🍎 Apple-智能'));
-  assert.ok(output.rules.includes('DOMAIN-SUFFIX,cp4.cloudflare.com,🍎 Apple-智能'));
+  assert.ok(output.rules.includes('DOMAIN-SUFFIX,apple-relay.fastly-edge.com,🤖 AI 平台'));
+  assert.ok(output.rules.includes('DOMAIN-SUFFIX,cp4.cloudflare.com,🤖 AI 平台'));
   assert.equal(output.rules.at(-1), 'MATCH,🐟 漏网之鱼');
 });
 
@@ -58,10 +58,9 @@ test('AI auto contains only direct-US nodes and is the AI and GLOBAL default', (
     assert.ok(ai);
     assert.equal(ai.type, 'url-test');
     assert.deepEqual(ai.proxies, device === 'tvos' ? ['直连-美国02'] : ['直连-美国01', '直连-美国02']);
-    for (const name of ['🤖 AI 平台', '🍎 Apple-智能']) {
-      const group = groups.find(g => g.name === name);
-      assert.ok(group.proxies.includes(ai.name));
-    }
+    const group = groups.find(g => g.name === '🤖 AI 平台');
+    assert.ok(group.proxies.includes(ai.name));
+    assert.ok(!groups.some(g => g.name === '🍎 Apple-智能'));
     const aiPlatform = groups.find(g => g.name === '🤖 AI 平台');
     assert.equal(aiPlatform.proxies[0], ai.name);
     assert.equal(aiPlatform['default-selected'], ai.name);

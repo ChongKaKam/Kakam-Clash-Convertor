@@ -92,11 +92,10 @@ export function buildSubscription(text, device = 'android', options = {}) {
 
   const serviceGroup = (key, first = []) => ({
     name: GROUP[key], type: 'select',
-    proxies: compact([...first, ...(['ai', 'intelligence'].includes(key) && aiAuto ? [aiAuto.name] : []), '🚀 节点选择', ...autoNames, 'DIRECT', ...allNames]),
+    proxies: compact([...first, ...(key === 'ai' && aiAuto ? [aiAuto.name] : []), '🚀 节点选择', ...autoNames, 'DIRECT', ...allNames]),
   });
   const serviceGroups = [
     serviceGroup('ai', [aiAuto?.name, preferred('us'), preferred('tw'), preferred('jp')]),
-    serviceGroup('intelligence', [preferred('us'), preferred('jp'), preferred('tw')]),
     serviceGroup('youtube'), serviceGroup('netflix'), serviceGroup('hbo', [preferred('us')]),
     serviceGroup('disney'), serviceGroup('prime'),
     { name: GROUP.spotify, type: 'select', proxies: compact([...autoNames, 'DIRECT']) },
