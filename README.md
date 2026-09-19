@@ -60,7 +60,7 @@ CORE_BIN=/absolute/path/to/mihomo SOURCE_FILE=/absolute/path/to/source.yaml node
 
 检查会下载公开规则，在临时目录分别启动旧版 YAML / 新版 MRS 配置，确认所有 provider 已载入，输出采样 RSS。为隔离规则开销，两组均关闭 TUN、DNS、嗅探、代理监听和节点自动测速；不会测试节点连通性或上传订阅。macOS/Linux RSS 不能当作 iPhone 内存实测，也不替代手机 VPN 验证。
 
-更新服务后，在 Clash Mi 更新原有 **iOS 订阅链接**即可取得新配置，无需更换令牌或改用节点-only订阅。远端服务需先部署本次代码更新，单独更新本机不会改变远端输出。
+管理页面复制出的 iOS 链接会自动带上 `?overwrite=false`，按照 Clash Mi 官方约定关闭默认配置覆写，避免订阅内的 Apple-智能等规则被客户端替换。首次使用新链接时，应在 Clash Mi 删除旧配置并用新链接重新添加；仅点击旧配置的“更新”不会改变已经保存的链接或覆写模式。无需更换公开令牌或改用节点-only订阅。远端服务需先部署本次代码更新，单独更新本机不会改变远端输出。
 
 ## Docker 部署
 

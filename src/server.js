@@ -160,7 +160,11 @@ async function serveStatic(res, pathname) {
     res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400' });
     return res.end(REGION_ICONS[icon[1]]);
   }
-  const files = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/explorer.js': ['explorer.js', 'text/javascript'], '/styles.css': ['styles.css', 'text/css'] };
+  const files = {
+    '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'],
+    '/explorer.js': ['explorer.js', 'text/javascript'], '/urls.js': ['urls.js', 'text/javascript'],
+    '/styles.css': ['styles.css', 'text/css'],
+  };
   const entry = files[pathname];
   if (!entry) throw new HttpError(404, '页面不存在');
   const body = await fs.readFile(path.join(publicDir, entry[0]));

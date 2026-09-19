@@ -120,4 +120,7 @@ test('authenticated whitelist survives restart and immediately changes existing 
     assert.equal(bytes.readUInt32BE(16), 96); assert.equal(bytes.readUInt32BE(20), 96);
   }
   assert.equal((await fetch(base + '/explorer.js')).status, 200);
+  const urlsScript = await fetch(base + '/urls.js');
+  assert.equal(urlsScript.status, 200);
+  assert.match(await urlsScript.text(), /overwrite=false/);
 });
