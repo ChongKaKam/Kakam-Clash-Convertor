@@ -73,6 +73,14 @@ test('all Apple Intelligence domains route before generic OpenAI, iCloud, Apple 
     assert.equal(domainRoute(config, domain), GROUP.intelligence, domain);
     assert.equal(domainRoute(config, `test.${domain}`), GROUP.intelligence, domain);
   }
+  const actionIndexes = (action) => config.rules.flatMap((rule, index) => {
+    const parts = rule.split(',');
+    return (parts.at(-1) === 'no-resolve' ? parts.at(-2) : parts.at(-1)) === action ? [index] : [];
+  });
+  const intelligenceIndexes = actionIndexes(GROUP.intelligence);
+  const appleIndexes = actionIndexes(GROUP.apple);
+  assert.ok(intelligenceIndexes.length > 0 && appleIndexes.length > 0);
+  assert.ok(Math.max(...intelligenceIndexes) < Math.min(...appleIndexes));
 });
 
 test('global whitelist overrides Apple Intelligence, AI, streaming and advertisements', () => {
