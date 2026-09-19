@@ -12,6 +12,7 @@ export const REGIONS = [
 ];
 
 export const AI_AUTO_GROUP = '🌈 AI 自动';
+export const APPLE_INTELLIGENCE_AUTO_GROUP = '🍎 Apple智能自动';
 const AI_AUTO_SERVICE_GROUPS = new Set(['ai', 'intelligence', 'icloud', 'apple']);
 
 const BASE = {
@@ -99,6 +100,11 @@ export function buildSubscription(text, device = 'android', options = {}) {
     name: AI_AUTO_GROUP, type: 'url-test', proxies: aiNames,
     url: 'https://www.gstatic.com/generate_204', interval: 300, tolerance: 80, lazy: true,
   } : null;
+  const appleIntelligenceAuto = aiNames.length ? {
+    name: APPLE_INTELLIGENCE_AUTO_GROUP, type: 'url-test', proxies: aiNames,
+    url: 'https://ios.chat.openai.com/', 'expected-status': 403,
+    interval: 300, tolerance: 80, lazy: true,
+  } : null;
   const preferred = (key) => regionNames[key].length ? REGIONS.find((region) => region.key === key).name : undefined;
   const compact = (values) => [...new Set(values.filter(Boolean))];
 
@@ -110,8 +116,9 @@ export function buildSubscription(text, device = 'android', options = {}) {
     { name: '🚀 节点选择', type: 'select', proxies: compact([...autoNames, ...allNames, 'DIRECT']) },
     ...autoGroups,
     ...(aiAuto ? [aiAuto] : []),
-    serviceGroup('ai', [preferred('us'), preferred('tw'), preferred('jp')]),
-    serviceGroup('intelligence', [preferred('us'), preferred('jp'), preferred('tw')]),
+    ...(appleIntelligenceAuto ? [appleIntelligenceAuto] : []),
+    serviceGroup('ai', [aiAuto?.name, appleIntelligenceAuto?.name, preferred('us'), preferred('tw'), preferred('jp')]),
+    serviceGroup('intelligence', [appleIntelligenceAuto?.name, aiAuto?.name, preferred('us'), preferred('jp'), preferred('tw')]),
     serviceGroup('youtube'), serviceGroup('netflix'), serviceGroup('hbo', [preferred('us')]),
     serviceGroup('disney'), serviceGroup('prime'), serviceGroup('google'), serviceGroup('mail'),
     serviceGroup('japan', [preferred('jp')]),

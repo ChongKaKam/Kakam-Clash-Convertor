@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import YAML from 'yaml';
-import { convertSubscription, summarizeSubscription, buildSubscription, subscriptionPreview } from '../src/converter.js';
+import {
+  AI_AUTO_GROUP, APPLE_INTELLIGENCE_AUTO_GROUP, buildSubscription, convertSubscription,
+  subscriptionPreview, summarizeSubscription,
+} from '../src/converter.js';
 
 const source = `
 proxies:
@@ -43,7 +46,7 @@ test('summarizes selected nodes by region', () => {
   });
 });
 
-test('AI auto contains only direct-US nodes and is offered to AI and Apple-related groups', () => {
+test('AI auto stays unchanged while Apple Intelligence gets a dedicated direct-US health group', () => {
   const input = YAML.stringify({ proxies: [
     { name: '直连-美国01', type: 'mieru' },
     { name: '直连-美国02', type: 'trojan' },
@@ -54,20 +57,33 @@ test('AI auto contains only direct-US nodes and is offered to AI and Apple-relat
   for (const device of ['ios', 'android', 'tvos']) {
     const config = buildSubscription(input, device);
     const groups = config['proxy-groups'];
-    const ai = groups.find(g => g.name === '🌈 AI 自动');
+    const ai = groups.find(g => g.name === AI_AUTO_GROUP);
     assert.ok(ai);
     assert.equal(ai.type, 'url-test');
     assert.deepEqual(ai.proxies, device === 'tvos' ? ['直连-美国02'] : ['直连-美国01', '直连-美国02']);
+    assert.equal(ai.url, 'https://www.gstatic.com/generate_204');
+    assert.equal(ai['expected-status'], undefined);
+
+    const appleAuto = groups.find(g => g.name === APPLE_INTELLIGENCE_AUTO_GROUP);
+    assert.ok(appleAuto);
+    assert.equal(appleAuto.type, 'url-test');
+    assert.deepEqual(appleAuto.proxies, ai.proxies);
+    assert.equal(appleAuto.url, 'https://ios.chat.openai.com/');
+    assert.equal(appleAuto['expected-status'], 403);
+
     for (const name of ['🤖 AI 平台', '🍎 Apple-智能', '☁️ iCloud', '🍎 苹果服务']) {
       const group = groups.find(g => g.name === name);
       assert.ok(group.proxies.includes(ai.name));
     }
-    assert.equal(groups.find(g => g.name === '🤖 AI 平台').proxies[0], 'US 美国自动');
-    assert.equal(groups.find(g => g.name === '🍎 Apple-智能').proxies[0], 'US 美国自动');
+    assert.equal(groups.find(g => g.name === '🤖 AI 平台').proxies[0], AI_AUTO_GROUP);
+    assert.equal(groups.find(g => g.name === '🍎 Apple-智能').proxies[0], APPLE_INTELLIGENCE_AUTO_GROUP);
+    assert.ok(groups.find(g => g.name === '🤖 AI 平台').proxies.includes(APPLE_INTELLIGENCE_AUTO_GROUP));
+    assert.ok(groups.find(g => g.name === '🍎 Apple-智能').proxies.includes(AI_AUTO_GROUP));
     assert.equal(groups.find(g => g.name === '☁️ iCloud').proxies[0], 'DIRECT');
     assert.equal(groups.find(g => g.name === '🍎 苹果服务').proxies[0], 'DIRECT');
     assert.ok(!groups.find(g => g.name === '🔎 Google').proxies.includes(ai.name));
     assert.deepEqual(subscriptionPreview(config, device).groups.find(g => g.name === ai.name).members, ai.proxies);
+    assert.deepEqual(subscriptionPreview(config, device).groups.find(g => g.name === appleAuto.name).members, appleAuto.proxies);
   }
 });
 
@@ -76,7 +92,8 @@ test('AI auto is omitted without eligible nodes and never falls back to DIRECT o
     { name: '直连-美国01', type: 'mieru' }, { name: 'pro-美国01', type: 'trojan' },
   ] });
   const groups = buildSubscription(input, 'tvos')['proxy-groups'];
-  assert.ok(!groups.some(g => g.name === '🌈 AI 自动' || g.proxies.includes('🌈 AI 自动')));
+  assert.ok(!groups.some(g => [AI_AUTO_GROUP, APPLE_INTELLIGENCE_AUTO_GROUP].includes(g.name)));
+  assert.ok(!groups.some(g => g.proxies.some(name => [AI_AUTO_GROUP, APPLE_INTELLIGENCE_AUTO_GROUP].includes(name))));
 });
 
 test('mobile Mieru nodes enable UDP when the upstream omits the capability flag', () => {
