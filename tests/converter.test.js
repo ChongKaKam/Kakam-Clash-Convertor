@@ -43,7 +43,7 @@ test('summarizes selected nodes by region', () => {
   });
 });
 
-test('AI auto contains only direct-US nodes and is the AI and GLOBAL default', () => {
+test('renamed direct-US auto preserves filtering and the new AI fallback is the default', () => {
   const input = YAML.stringify({ proxies: [
     { name: '直连-美国01', type: 'mieru' },
     { name: '直连-美国02', type: 'trojan' },
@@ -54,10 +54,13 @@ test('AI auto contains only direct-US nodes and is the AI and GLOBAL default', (
   for (const device of ['ios', 'android', 'tvos']) {
     const config = buildSubscription(input, device);
     const groups = config['proxy-groups'];
-    const ai = groups.find(g => g.name === '🌈 AI 自动');
+    const ai = groups.find(g => g.name === 'AI-自动');
+    const direct = groups.find(g => g.name === '美国-直连-自动');
     assert.ok(ai);
-    assert.equal(ai.type, 'url-test');
-    assert.deepEqual(ai.proxies, device === 'tvos' ? ['直连-美国02'] : ['直连-美国01', '直连-美国02']);
+    assert.equal(ai.type, 'fallback');
+    assert.deepEqual(ai.proxies, [direct.name]);
+    assert.equal(direct.type, 'url-test');
+    assert.deepEqual(direct.proxies, device === 'tvos' ? ['直连-美国02'] : ['直连-美国01', '直连-美国02']);
     const group = groups.find(g => g.name === '🤖 AI 平台');
     assert.ok(group.proxies.includes(ai.name));
     assert.ok(!groups.some(g => g.name === '🍎 Apple-智能'));
@@ -77,7 +80,7 @@ test('AI auto is omitted without eligible nodes and never falls back to DIRECT o
     { name: '直连-美国01', type: 'mieru' }, { name: 'pro-美国01', type: 'trojan' },
   ] });
   const groups = buildSubscription(input, 'tvos')['proxy-groups'];
-  assert.ok(!groups.some(g => g.name === '🌈 AI 自动' || g.proxies.includes('🌈 AI 自动')));
+  assert.ok(!groups.some(g => ['AI-自动', '美国-直连-自动', '🌈 AI 自动'].includes(g.name) || g.proxies.includes('AI-自动')));
   const global = groups.find(g => g.name === 'GLOBAL');
   assert.equal(global.proxies[0], '🚀 节点选择');
   assert.equal(global['default-selected'], undefined);
@@ -87,4 +90,54 @@ test('Spotify offers regional automatic groups and DIRECT without individual nod
   const config = buildSubscription(source, 'android');
   const spotify = config['proxy-groups'].find(g => g.name === '🎵 Spotify');
   assert.deepEqual(spotify.proxies, ['HK 香港自动', 'US 美国自动', 'JP 日本自动', 'DIRECT']);
+});
+
+const dmitProxies = [
+  { name: 'DMIT-US', type: 'vless', server: '192.0.2.1', port: 443, uuid: 'fixture', tls: true, 'reality-opts': { 'public-key': 'fixture' } },
+  { name: 'DMIT-US-Hysteria2', type: 'hysteria2', server: '192.0.2.1', port: 8443, password: 'fixture' },
+];
+
+test('DMIT is available in every select group and AI strictly prefers VLESS before direct-US', () => {
+  for (const device of ['ios', 'android', 'tvos']) {
+    const config = YAML.parse(convertSubscription(source, device, { dmitProxies }));
+    const groups = config['proxy-groups'];
+    assert.deepEqual(config.proxies.slice(0, 2), dmitProxies);
+    for (const group of groups.filter(g => g.type === 'select')) {
+      for (const { name } of dmitProxies) assert.ok(group.proxies.includes(name), `${group.name}: ${name}`);
+    }
+    const ai = groups.find(g => g.name === 'AI-自动');
+    assert.equal(ai.type, 'fallback');
+    assert.equal(ai.lazy, false);
+    assert.deepEqual(ai.proxies, ['DMIT-US', '美国-直连-自动']);
+    assert.deepEqual(groups.find(g => g.name === '美国-直连-自动').proxies, ['直连-美国01']);
+    assert.deepEqual(groups.find(g => g.name === 'HK 香港自动').proxies, ['pro-香港-01']);
+    assert.deepEqual(groups.find(g => g.name === 'JP 日本自动').proxies, ['pro-日本01']);
+    assert.ok(groups.find(g => g.name === 'US 美国自动').proxies.includes('DMIT-US'));
+    for (const name of ['🤖 AI 平台', 'GLOBAL']) {
+      assert.equal(groups.find(g => g.name === name).proxies[0], ai.name);
+      assert.equal(groups.find(g => g.name === name)['default-selected'], ai.name);
+    }
+    assert.ok(!groups.some(g => g.name === '🌈 AI 自动'));
+    const available = new Set(['DIRECT', 'REJECT', ...config.proxies.map(p => p.name), ...groups.map(g => g.name)]);
+    for (const group of groups) for (const name of group.proxies) assert.ok(available.has(name));
+    const visit = (name, ancestors = new Set()) => {
+      assert.ok(!ancestors.has(name), `cycle: ${name}`);
+      const group = groups.find(g => g.name === name);
+      if (group) for (const member of group.proxies) visit(member, new Set([...ancestors, name]));
+    };
+    for (const group of groups) visit(group.name);
+    const preview = subscriptionPreview(config, device);
+    assert.equal(preview.nodes.find(n => n.name === 'DMIT-US').region, 'us');
+    assert.deepEqual(preview.groups.find(g => g.name === ai.name).members, ai.proxies);
+  }
+});
+
+test('DMIT remains usable without eligible upstream nodes or a compatible direct-US fallback', () => {
+  const input = YAML.stringify({ proxies: [{ name: '直连-美国01', type: 'mieru' }] });
+  const config = buildSubscription(input, 'tvos', { dmitProxies });
+  assert.deepEqual(config.proxies, dmitProxies);
+  assert.deepEqual(config['proxy-groups'].find(g => g.name === 'AI-自动').proxies, ['DMIT-US']);
+  assert.ok(!config['proxy-groups'].some(g => g.name === '美国-直连-自动'));
+  const hy2Only = buildSubscription(source, 'ios', { dmitProxies: [dmitProxies[1]] });
+  assert.deepEqual(hy2Only['proxy-groups'].find(g => g.name === 'AI-自动').proxies, ['美国-直连-自动']);
 });

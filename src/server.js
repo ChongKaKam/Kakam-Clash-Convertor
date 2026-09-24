@@ -10,6 +10,7 @@ import { SubscriptionStore } from './store.js';
 import { SettingsStore } from './settings.js';
 import { REGION_ICONS } from './icons.js';
 import { LatencyManager } from './latency.js';
+import { readDmitProxies } from './dmit.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const publicDir = path.join(root, 'public');
@@ -126,6 +127,7 @@ async function api(req, res, url) {
     const device = url.searchParams.get('device') || 'ios';
     const built = buildSubscription(await store.readCache(id), device, {
       includeUpstreamRules: item.includeUpstreamRules, directWhitelist: settings.get().directWhitelist,
+      dmitProxies: await readDmitProxies(config.dataDir),
     });
     if (req.method === 'GET' && action === 'preview') return json(res, 200, {
       ...subscriptionPreview(built, device), latency: latency.get(id, device, built.proxies),
@@ -182,6 +184,7 @@ const server = http.createServer(async (req, res) => {
         includeUpstreamRules: item.includeUpstreamRules,
         directWhitelist: settings.get().directWhitelist,
         publicBaseUrl: baseUrl(req),
+        dmitProxies: await readDmitProxies(config.dataDir),
       });
       res.writeHead(200, {
         'content-type': 'text/yaml; charset=utf-8',

@@ -3,6 +3,7 @@ import { parseSubscription } from './parser.js';
 import { GROUP, ruleProviders, routingRules } from './routing.js';
 import { directWhitelistRules } from './settings.js';
 import { HttpError } from './errors.js';
+import { DMIT_VLESS } from './dmit.js';
 
 export const REGIONS = [
   { key: 'hk', name: 'HK 香港自动', pattern: /(香港|港|Hong\s*Kong|\bHK\b|🇭🇰)/i },
@@ -11,7 +12,8 @@ export const REGIONS = [
   { key: 'jp', name: 'JP 日本自动', pattern: /(日本|Japan|Tokyo|Osaka|\bJP\b|🇯🇵)/i },
 ];
 
-export const AI_AUTO_GROUP = '🌈 AI 自动';
+export const AI_AUTO_GROUP = 'AI-自动';
+export const US_DIRECT_AUTO_GROUP = '美国-直连-自动';
 
 const BASE = {
   'mixed-port': 7890,
@@ -64,8 +66,10 @@ function eligible(proxy) {
 export function buildSubscription(text, device = 'android', options = {}) {
   if (!['tvos', 'ios', 'android'].includes(device)) throw new HttpError(400, '设备必须是 tvos、ios 或 android');
   const source = parseSubscription(text);
-  const proxies = uniqueNames(source.proxies.filter((proxy) => eligible(proxy) &&
-    !(device === 'tvos' && String(proxy.type).toLowerCase() === 'mieru')));
+  // Reserve the private node names before naming upstream nodes.
+  const dmitProxies = options.dmitProxies ?? [];
+  const proxies = uniqueNames([...dmitProxies, ...source.proxies.filter((proxy) => eligible(proxy) &&
+    !(device === 'tvos' && String(proxy.type).toLowerCase() === 'mieru'))]);
   if (!proxies.length) throw new HttpError(422, device === 'tvos'
     ? 'tvOS 过滤 Mieru 后没有可用的港台美日 pro-* / 直连-* 节点'
     : '订阅中没有匹配 pro-* 或 直连-* 且属于香港、台湾、美国、日本的节点');
@@ -83,9 +87,17 @@ export function buildSubscription(text, device = 'android', options = {}) {
   const autoNames = autoGroups.map((group) => group.name);
   // Filter after device compatibility checks; never add DIRECT or other US nodes.
   const aiNames = allNames.filter((name) => name.startsWith('直连-美国'));
-  const aiAuto = aiNames.length ? {
-    name: AI_AUTO_GROUP, type: 'url-test', proxies: aiNames,
+  const usDirectAuto = aiNames.length ? {
+    name: US_DIRECT_AUTO_GROUP, type: 'url-test', proxies: aiNames,
     url: 'https://www.gstatic.com/generate_204', interval: 300, tolerance: 80, lazy: true,
+  } : null;
+  const aiCandidates = [
+    ...(dmitProxies.some((proxy) => proxy.name === DMIT_VLESS && proxy.type === 'vless') ? [DMIT_VLESS] : []),
+    ...(usDirectAuto ? [usDirectAuto.name] : []),
+  ];
+  const aiAuto = aiCandidates.length ? {
+    name: AI_AUTO_GROUP, type: 'fallback', proxies: aiCandidates,
+    url: 'https://www.gstatic.com/generate_204', interval: 60, lazy: false,
   } : null;
   const preferred = (key) => regionNames[key].length ? REGIONS.find((region) => region.key === key).name : undefined;
   const compact = (values) => [...new Set(values.filter(Boolean))];
@@ -98,7 +110,7 @@ export function buildSubscription(text, device = 'android', options = {}) {
     serviceGroup('ai', [aiAuto?.name, preferred('us'), preferred('tw'), preferred('jp')]),
     serviceGroup('youtube'), serviceGroup('netflix'), serviceGroup('hbo', [preferred('us')]),
     serviceGroup('disney'), serviceGroup('prime'),
-    { name: GROUP.spotify, type: 'select', proxies: compact([...autoNames, 'DIRECT']) },
+    { name: GROUP.spotify, type: 'select', proxies: compact([...autoNames, ...dmitProxies.map((proxy) => proxy.name), 'DIRECT']) },
     serviceGroup('google'), serviceGroup('mail'),
     serviceGroup('japan', [preferred('jp')]),
     serviceGroup('icloud', ['DIRECT']), serviceGroup('apple', ['DIRECT']),
@@ -114,6 +126,7 @@ export function buildSubscription(text, device = 'android', options = {}) {
   const groups = [
     { name: '🚀 节点选择', type: 'select', proxies: compact([...autoNames, ...allNames, 'DIRECT']) },
     ...autoGroups,
+    ...(usDirectAuto ? [usDirectAuto] : []),
     ...(aiAuto ? [aiAuto] : []),
     ...serviceGroups,
     globalGroup,

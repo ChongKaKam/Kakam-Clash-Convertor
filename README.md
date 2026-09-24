@@ -6,13 +6,14 @@
 
 - 支持 Clash/Mihomo YAML，以及常见 Base64/URI 节点订阅（SS、VMess、VLESS、Trojan、Hysteria2、TUIC）。
 - 香港、台湾、美国、日本独立 `url-test` 自动测速组；没有节点的地区不会生成空策略组。
-- 新增 `🌈 AI 自动`，仅包含名称以 `直连-美国` 开头且兼容当前设备的节点（不含 `pro-*`、其他地区或 `DIRECT`）。AI 平台和 Apple-智能均可选择它，原有默认选项保持不变。若过滤后无符合节点，则省略该组及选项，避免空组；例如 tvOS 会先排除 Mieru。
+- 原 `🌈 AI 自动` 改名为 `美国-直连-自动`，仍仅包含名称以 `直连-美国` 开头且兼容当前设备的节点。新增 `AI-自动` 故障回退组，顺序为 `DMIT-US`（VLESS + REALITY）→ `美国-直连-自动`，作为 AI 平台和 GLOBAL 的配置默认值；缺少的候选项自动省略，全部缺少时不生成空组。
+- 从私有数据目录的 `dmit.yaml` 加载 DMIT 节点，加入所有手动选择组（含 Spotify、GLOBAL、节点选择）及美国地区自动组；香港、台湾、日本自动组继续仅包含对应地区的节点。Hysteria2 命名为 `DMIT-US-Hysteria2`，供手动选择，不插入 AI 的回退顺序。
 - 地区使用服务自带 PNG 图标和 `HK/TW/US/JP` 文字标识，不依赖系统旗帜 Emoji 字体；生成的配置带有对应 `icon` URL。
 - 网页按设备可视化展示地区组、服务组、配置默认策略和过滤后的节点，支持按组筛选、名称/协议搜索、延迟排序。
 - 网页可通过独立 Mihomo 内核实测过滤后节点的 HTTP 延迟，展示进度、成功/失败和测试时间。
-- 服务分组：海外 AI、Apple-智能、YouTube、Netflix、HBO、Disney+、Prime Video、Google、邮件、日本区域、iCloud、苹果服务、微软服务、国内流媒体、漏网之鱼、广告拦截。
-- 每个服务组均可选择地区自动组、单个节点和 `DIRECT`。`直连-*` 是机场代理节点，`DIRECT` 才表示本地直连。
-- AI 和 Apple-智能默认优先美国自动；日本区域默认日本自动；iCloud、苹果、微软、国内流媒体默认 `DIRECT`；广告组默认 `REJECT`，可切换为 `DIRECT`。
+- 服务分组：AI 平台（含 Apple 智能）、YouTube、Netflix、HBO、Disney+、Prime Video、Spotify、Google、邮件、日本区域、iCloud、苹果服务、微软服务、国内流媒体、漏网之鱼、广告拦截。
+- 每个服务组均可选择地区自动组和 `DIRECT`，并可单独选择节点；Spotify 仅保留地区自动组、DMIT 节点和 `DIRECT`。`直连-*` 是机场代理节点，`DIRECT` 才表示本地直连。
+- AI 平台和 GLOBAL 默认优先 `AI-自动`；日本区域默认日本自动；iCloud、苹果、微软、国内流媒体默认 `DIRECT`；广告组默认 `REJECT`，可切换为 `DIRECT`。
 - tvOS/Android 接入 [Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules) 的 9 个基础规则集；iOS 使用 MetaCubeX 的 10 个二进制 MRS 规则集以降低启动内存。客户端每 24 小时更新。Google 基础集仅覆盖可在大陆直连的部分域名，完整服务分组由内置域名和上游规则补充。
 - 合并上游自包含域名/IP 规则时按服务映射策略组，并按域名具体程度排序，确保邮件、AI、YouTube API 等先于 Google/微软大类匹配。没有对应组的规则映射到“漏网之鱼”。
 - 网页可编辑全局 DIRECT 白名单，匹配时强制直连，优先于所有分组和广告规则。持久化到 `/data/settings.json`，保存后下一次下载同一订阅链接即可生效。
@@ -21,9 +22,23 @@
 - 管理 API 使用 Bearer Token；设备订阅使用独立的高熵公开令牌，可随时轮换。
 - 阻止本机/内网上游地址，并提供响应大小限制、拉取超时、重定向复检、原子化持久化。
 
-> Apple-智能包含 `gateway.icloud.com`、`apple-relay.apple.com`、`apple-relay.fastly-edge.com`、`apple-relay.cloudflare.com`、`guzzoni.apple.com`、`cp4.cloudflare.com`、`gspe1-ssl.ls.apple.com`、`smoot.apple.com`、`apple-relay.akamaized.net`、`apple-relay.mask.apple-dns.net`、`aapps.mzstatic.com`，优先于普通 Apple/iCloud 规则。三端共用这些规则，iOS 可使用它们处理 Apple ChatGPT 登录流量。普通 ChatGPT 流量走 AI 平台组；两组默认同为美国自动。
+> Apple 智能包含 `gateway.icloud.com`、`apple-relay.apple.com`、`apple-relay.fastly-edge.com`、`apple-relay.cloudflare.com`、`guzzoni.apple.com`、`cp4.cloudflare.com`、`gspe1-ssl.ls.apple.com`、`smoot.apple.com`、`apple-relay.akamaized.net`、`apple-relay.mask.apple-dns.net`、`aapps.mzstatic.com`，优先于普通 Apple/iCloud 规则。三端共用这些规则，Apple 智能与普通 ChatGPT 流量均走 AI 平台组。
 
 规则目录在 `src/routing.js`，设备与节点设置在 `src/converter.js`。Apple/AI 域名和地域可用性会变化，规则匹配不等于承诺账号可登录。
+
+## DMIT 私有节点与 AI 回退
+
+将分享的 YAML 节点文件保存为 `$DATA_DIR/dmit.yaml`（本地默认为 `data/dmit.yaml`，Docker 为 `/data/dmit.yaml`）。支持原始 YAML 列表或包含 `proxies:` 的文件；VLESS + REALITY 和 Hysteria2 各最多一个，名称自动归一为 `DMIT-US` 和 `DMIT-US-Hysteria2`，其余连接参数原样保留。文件不存在时仅使用上游节点；文件格式有误则返回明确错误，不静默忽略。该文件包含凭据，已随 `data/` 排除在 Git 和镜像构建上下文之外。
+
+远端更新代码并重建服务后，将私有文件单独复制到数据卷（在保存该文件的部署主机上执行）：
+
+```bash
+docker compose --env-file .env.production cp ./data/dmit.yaml clash-converter:/data/dmit.yaml
+docker compose --env-file .env.production exec --user root clash-converter chown node:node /data/dmit.yaml
+docker compose --env-file .env.production exec clash-converter chmod 600 /data/dmit.yaml
+```
+
+文件在下载、预览和测速时读取，修改后无需刷新上游。客户端更新原订阅链接即可获取新分组；若已缓存手动选择，在 AI 平台中手动选一次 `AI-自动`。原 `美国-直连-自动` 仍按延迟自动选择机场的直连美国节点，新 `AI-自动` 使用 [Mihomo fallback](https://wiki.metacubex.one/config/proxy-groups/fallback/) 按顺序选首个可用项，每 60 秒主动探测。这里的失败指连通性检测失败，不会因 AI 网站返回地区限制、登录错误或额度耗尽而自动切换。DMIT 恢复可用后重新获得优先权；Hysteria2 可在各手动组单独选择。
 
 ## DIRECT 白名单
 

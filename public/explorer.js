@@ -70,12 +70,12 @@ export function mountExplorer(host, item, request) {
     if (!preview) return;
     $('.region-grid').replaceChildren(); $('.group-grid').replaceChildren();
     for (const group of preview.groups) {
-      const automatic = group.type === 'url-test';
+      const automatic = ['url-test', 'fallback'].includes(group.type);
       const button = element('button', `group-tile${selected === group.name ? ' selected' : ''}`);
       button.type = 'button'; button.setAttribute('aria-pressed', String(selected === group.name));
       button.append(badge(group.region, initials(group.name)));
       const copy = element('span', 'group-copy');
-      copy.append(element('strong', '', title(group.name)), element('small', '', automatic ? `${group.members.length} 个节点 · 自动测速` : `${group.ruleCount} 条路由 · ${group.members.length} 个选项`));
+      copy.append(element('strong', '', title(group.name)), element('small', '', automatic ? `${group.members.length} 个选项 · ${group.type === 'fallback' ? '按顺序故障回退' : '自动测速'}` : `${group.ruleCount} 条路由 · ${group.members.length} 个选项`));
       button.append(copy); button.onclick = () => choose(group.name);
       $(automatic ? '.region-grid' : '.group-grid').append(button);
     }
@@ -85,7 +85,9 @@ export function mountExplorer(host, item, request) {
       detail.append(element('p', 'help', '点击分组查看可选策略与节点。此处展示生成配置，客户端当前选择可能不同。'));
       return;
     }
-    detail.append(element('strong', '', `${title(group.name)} → ${group.type === 'url-test' ? '客户端自动选择低延迟节点' : `配置默认：${group.default}`}`));
+    const behavior = group.type === 'fallback' ? `按顺序选择首个可用项：${group.members.join(' → ')}`
+      : group.type === 'url-test' ? '客户端自动选择低延迟节点' : `配置默认：${group.default}`;
+    detail.append(element('strong', '', `${title(group.name)} → ${behavior}`));
     const groupNames = new Set(preview.groups.map((g) => g.name));
     const choices = element('div', 'route-choices');
     for (const member of group.members.filter((name) => groupNames.has(name) || ['DIRECT', 'REJECT'].includes(name))) {

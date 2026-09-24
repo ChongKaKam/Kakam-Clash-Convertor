@@ -80,6 +80,17 @@ test('authenticated whitelist survives restart and immediately changes existing 
   assert.equal(idle.status, 'idle'); assert.equal(idle.total, 1);
   const before = await (await fetch(`${base}/sub/${subscription.publicToken}/ios.yaml`)).text();
   assert.ok(before.includes('🤖 AI 平台'));
+  // Installing the private file affects download, preview and latency immediately.
+  await fs.writeFile(path.join(dataDir, 'dmit.yaml'), YAML.stringify([
+    { name: 'shared-vless', type: 'vless', server: '192.0.2.1', port: 443, uuid: 'private-dmit-uuid', tls: true, 'reality-opts': { 'public-key': 'private-dmit-key' } },
+    { name: 'shared-hy2', type: 'hysteria2', server: '192.0.2.1', port: 8443, password: 'private-dmit-password' },
+  ]));
+  const dmitPreview = await (await api(previewPath)).json();
+  assert.deepEqual(dmitPreview.nodes.map(n => n.name), ['DMIT-US', 'DMIT-US-Hysteria2', 'pro-美国01']);
+  assert.ok(!JSON.stringify(dmitPreview).includes('private-dmit-'));
+  assert.ok(!JSON.stringify(dmitPreview).includes('192.0.2.1'));
+  const dmitLatency = await (await api(`/api/subscriptions/${subscription.id}/latency?device=tvos`)).json();
+  assert.equal(dmitLatency.total, 3);
   const saved = await api('/api/settings', 'PUT', { directWhitelist: 'chatgpt.com\ngateway.icloud.com\n192.0.2.0/24' });
   assert.equal(saved.status, 200);
   const expected = await saved.json();
@@ -92,6 +103,9 @@ test('authenticated whitelist survives restart and immediately changes existing 
     const label = { tvos: 'tvOS', ios: 'iOS', android: 'Android' }[device];
     assert.equal(response.headers.get('content-disposition'), `attachment; filename=${label}-kakamlab.yaml`);
     const config = YAML.parse(await response.text());
+    assert.equal(config.proxies.find(p => p.name === 'DMIT-US').uuid, 'private-dmit-uuid');
+    assert.deepEqual(config['proxy-groups'].find(g => g.name === 'AI-自动').proxies, ['DMIT-US']);
+    for (const group of config['proxy-groups'].filter(g => g.type === 'select')) assert.ok(group.proxies.includes('DMIT-US'));
     assert.ok(Object.values(config['rule-providers']).every((provider) => provider.format === (device === 'ios' ? 'mrs' : 'yaml')));
     if (device === 'ios') assert.ok(!config.rules.some((rule) => /^(GEOIP|GEOSITE|IP-ASN),/.test(rule)));
     const regionGroup = config['proxy-groups'].find((group) => group.name === 'US 美国自动');
@@ -107,6 +121,7 @@ test('authenticated whitelist survives restart and immediately changes existing 
   assert.deepEqual(await (await api('/api/settings')).json(), expected);
   const after = YAML.parse(await (await fetch(`${base}/sub/${subscription.publicToken}/ios.yaml`)).text());
   assert.equal(after.rules[0], 'DOMAIN-SUFFIX,chatgpt.com,DIRECT');
+  assert.equal(after.proxies.find(p => p.name === 'DMIT-US').uuid, 'private-dmit-uuid');
   await api('/api/settings', 'PUT', { directWhitelist: [] });
   const cleared = YAML.parse(await (await fetch(`${base}/sub/${subscription.publicToken}/ios.yaml`)).text());
   assert.ok(!cleared.rules.includes('DOMAIN-SUFFIX,chatgpt.com,DIRECT'));
