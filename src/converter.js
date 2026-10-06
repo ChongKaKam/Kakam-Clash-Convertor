@@ -96,8 +96,8 @@ export function buildSubscription(text, device = 'android', options = {}) {
     ...(usDirectAuto ? [usDirectAuto.name] : []),
   ];
   const aiAuto = aiCandidates.length ? {
-    name: AI_AUTO_GROUP, type: 'fallback', proxies: aiCandidates,
-    url: 'https://www.gstatic.com/generate_204', interval: 60, lazy: false,
+    name: AI_AUTO_GROUP, type: device === 'android' ? 'select' : 'fallback', proxies: aiCandidates,
+    ...(device === 'android' ? {} : { url: 'https://www.gstatic.com/generate_204', interval: 60, lazy: false }),
   } : null;
   const preferred = (key) => regionNames[key].length ? REGIONS.find((region) => region.key === key).name : undefined;
   const compact = (values) => [...new Set(values.filter(Boolean))];
@@ -107,7 +107,7 @@ export function buildSubscription(text, device = 'android', options = {}) {
     proxies: compact([...first, ...(key === 'ai' && aiAuto ? [aiAuto.name] : []), '🚀 节点选择', ...autoNames, 'DIRECT', ...allNames]),
   });
   const serviceGroups = [
-    serviceGroup('ai', [aiAuto?.name, preferred('us'), preferred('tw'), preferred('jp')]),
+    serviceGroup('ai', [aiAuto?.name, device === 'android' ? usDirectAuto?.name : undefined, preferred('us'), preferred('tw'), preferred('jp')]),
     serviceGroup('youtube'), serviceGroup('netflix'), serviceGroup('hbo', [preferred('us')]),
     serviceGroup('disney'), serviceGroup('prime'),
     { name: GROUP.spotify, type: 'select', proxies: compact([...autoNames, ...dmitProxies.map((proxy) => proxy.name), 'DIRECT']) },

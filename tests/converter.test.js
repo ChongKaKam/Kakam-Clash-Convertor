@@ -43,7 +43,7 @@ test('summarizes selected nodes by region', () => {
   });
 });
 
-test('renamed direct-US auto preserves filtering and the new AI fallback is the default', () => {
+test('direct-US auto preserves filtering and device-specific AI remains the default', () => {
   const input = YAML.stringify({ proxies: [
     { name: '直连-美国01', type: 'mieru' },
     { name: '直连-美国02', type: 'trojan' },
@@ -57,12 +57,13 @@ test('renamed direct-US auto preserves filtering and the new AI fallback is the 
     const ai = groups.find(g => g.name === 'AI-自动');
     const direct = groups.find(g => g.name === '美国-直连-自动');
     assert.ok(ai);
-    assert.equal(ai.type, 'fallback');
+    assert.equal(ai.type, device === 'android' ? 'select' : 'fallback');
     assert.deepEqual(ai.proxies, [direct.name]);
     assert.equal(direct.type, 'url-test');
     assert.deepEqual(direct.proxies, device === 'tvos' ? ['直连-美国02'] : ['直连-美国01', '直连-美国02']);
     const group = groups.find(g => g.name === '🤖 AI 平台');
     assert.ok(group.proxies.includes(ai.name));
+    assert.equal(group.proxies.includes(direct.name), device === 'android');
     assert.ok(!groups.some(g => g.name === '🍎 Apple-智能'));
     const aiPlatform = groups.find(g => g.name === '🤖 AI 平台');
     assert.equal(aiPlatform.proxies[0], ai.name);
@@ -97,17 +98,25 @@ const dmitProxies = [
   { name: 'DMIT-US-Hysteria2', type: 'hysteria2', server: '192.0.2.1', port: 8443, password: 'fixture' },
 ];
 
-test('DMIT is available in every select group and AI strictly prefers VLESS before direct-US', () => {
+test('AI offers only VLESS and direct-US while other select groups include both DMIT protocols', () => {
   for (const device of ['ios', 'android', 'tvos']) {
     const config = YAML.parse(convertSubscription(source, device, { dmitProxies }));
     const groups = config['proxy-groups'];
     assert.deepEqual(config.proxies.slice(0, 2), dmitProxies);
-    for (const group of groups.filter(g => g.type === 'select')) {
+    for (const group of groups.filter(g => g.type === 'select' && g.name !== 'AI-自动')) {
       for (const { name } of dmitProxies) assert.ok(group.proxies.includes(name), `${group.name}: ${name}`);
     }
     const ai = groups.find(g => g.name === 'AI-自动');
-    assert.equal(ai.type, 'fallback');
-    assert.equal(ai.lazy, false);
+    if (device === 'android') {
+      assert.deepEqual(ai, { name: 'AI-自动', type: 'select', proxies: ['DMIT-US', '美国-直连-自动'] });
+      assert.deepEqual(groups.find(g => g.name === '🤖 AI 平台').proxies.slice(0, 2), ['AI-自动', '美国-直连-自动']);
+    } else {
+      assert.equal(ai.type, 'fallback');
+      assert.equal(ai.url, 'https://www.gstatic.com/generate_204');
+      assert.equal(ai.interval, 60);
+      assert.equal(ai.lazy, false);
+      assert.ok(!groups.find(g => g.name === '🤖 AI 平台').proxies.includes('美国-直连-自动'));
+    }
     assert.deepEqual(ai.proxies, ['DMIT-US', '美国-直连-自动']);
     assert.deepEqual(groups.find(g => g.name === '美国-直连-自动').proxies, ['直连-美国01']);
     assert.deepEqual(groups.find(g => g.name === 'HK 香港自动').proxies, ['pro-香港-01']);
@@ -128,7 +137,10 @@ test('DMIT is available in every select group and AI strictly prefers VLESS befo
     for (const group of groups) visit(group.name);
     const preview = subscriptionPreview(config, device);
     assert.equal(preview.nodes.find(n => n.name === 'DMIT-US').region, 'us');
-    assert.deepEqual(preview.groups.find(g => g.name === ai.name).members, ai.proxies);
+    const aiPreview = preview.groups.find(g => g.name === ai.name);
+    assert.deepEqual(aiPreview.members, ai.proxies);
+    assert.equal(aiPreview.type, device === 'android' ? 'select' : 'fallback');
+    assert.equal(aiPreview.default, device === 'android' ? 'DMIT-US' : null);
   }
 });
 
@@ -140,4 +152,27 @@ test('DMIT remains usable without eligible upstream nodes or a compatible direct
   assert.ok(!config['proxy-groups'].some(g => g.name === '美国-直连-自动'));
   const hy2Only = buildSubscription(source, 'ios', { dmitProxies: [dmitProxies[1]] });
   assert.deepEqual(hy2Only['proxy-groups'].find(g => g.name === 'AI-自动').proxies, ['美国-直连-自动']);
+});
+
+test('Android AI selection omits unavailable candidates without empty or dangling groups', () => {
+  const proOnly = YAML.stringify({ proxies: [{ name: 'pro-美国01', type: 'trojan' }] });
+  for (const [input, privateNodes, candidates] of [
+    [proOnly, [], []],
+    [proOnly, [dmitProxies[1]], []],
+    [proOnly, dmitProxies, ['DMIT-US']],
+    [source, [dmitProxies[1]], ['美国-直连-自动']],
+  ]) {
+    const groups = buildSubscription(input, 'android', { dmitProxies: privateNodes })['proxy-groups'];
+    const ai = groups.find(g => g.name === 'AI-自动');
+    const platform = groups.find(g => g.name === '🤖 AI 平台');
+    if (candidates.length) {
+      assert.deepEqual(ai, { name: 'AI-自动', type: 'select', proxies: candidates });
+      assert.equal(platform.proxies[0], ai.name);
+    } else {
+      assert.equal(ai, undefined);
+      assert.ok(!groups.some(g => g.proxies.includes('AI-自动')));
+    }
+    assert.equal(platform.proxies.includes('美国-直连-自动'), candidates.includes('美国-直连-自动'));
+    assert.ok(groups.every(g => g.proxies.length > 0));
+  }
 });

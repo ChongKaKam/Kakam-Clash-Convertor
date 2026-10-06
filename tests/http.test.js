@@ -104,7 +104,9 @@ test('authenticated whitelist survives restart and immediately changes existing 
     assert.equal(response.headers.get('content-disposition'), `attachment; filename=${label}-kakamlab.yaml`);
     const config = YAML.parse(await response.text());
     assert.equal(config.proxies.find(p => p.name === 'DMIT-US').uuid, 'private-dmit-uuid');
-    assert.deepEqual(config['proxy-groups'].find(g => g.name === 'AI-自动').proxies, ['DMIT-US']);
+    const ai = config['proxy-groups'].find(g => g.name === 'AI-自动');
+    assert.deepEqual(ai.proxies, ['DMIT-US']);
+    assert.equal(ai.type, device === 'android' ? 'select' : 'fallback');
     for (const group of config['proxy-groups'].filter(g => g.type === 'select')) assert.ok(group.proxies.includes('DMIT-US'));
     assert.ok(Object.values(config['rule-providers']).every((provider) => provider.format === (device === 'ios' ? 'mrs' : 'yaml')));
     if (device === 'ios') assert.ok(!config.rules.some((rule) => /^(GEOIP|GEOSITE|IP-ASN),/.test(rule)));
