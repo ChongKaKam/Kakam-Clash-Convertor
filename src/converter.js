@@ -85,6 +85,9 @@ export function buildSubscription(text, device = 'android', options = {}) {
     url: 'https://www.gstatic.com/generate_204', interval: 300, tolerance: 80, lazy: true,
   }));
   const autoNames = autoGroups.map((group) => group.name);
+  const hkNames = new Set(regionNames.hk);
+  // Esim must not reach Hong Kong through a regional or general selector.
+  const esimAutoNames = autoGroups.filter((group) => group.proxies.every((name) => !hkNames.has(name))).map((group) => group.name);
   // Filter after device compatibility checks; never add DIRECT or other US nodes.
   const aiNames = allNames.filter((name) => name.startsWith('直连-美国'));
   const usDirectAuto = aiNames.length ? {
@@ -111,6 +114,10 @@ export function buildSubscription(text, device = 'android', options = {}) {
     serviceGroup('youtube'), serviceGroup('netflix'), serviceGroup('hbo', [preferred('us')]),
     serviceGroup('disney'), serviceGroup('prime'),
     { name: GROUP.spotify, type: 'select', proxies: compact([...autoNames, ...dmitProxies.map((proxy) => proxy.name), 'DIRECT']) },
+    {
+      name: GROUP.esim, type: 'select', 'default-selected': 'DIRECT',
+      proxies: ['DIRECT', ...esimAutoNames, ...allNames.filter((name) => !hkNames.has(name))],
+    },
     serviceGroup('google'), serviceGroup('mail'),
     serviceGroup('japan', [preferred('jp')]),
     serviceGroup('icloud', ['DIRECT']), serviceGroup('apple', ['DIRECT']),

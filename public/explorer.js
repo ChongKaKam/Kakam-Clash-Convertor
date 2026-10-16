@@ -16,6 +16,7 @@ function badge(region, fallback = '•') {
   return element('span', 'service-icon', fallback);
 }
 function initials(name) {
+  if (/esim/i.test(name)) return 'eS';
   if (name.includes('AI')) return 'AI';
   if (name.includes('智能')) return 'AP';
   if (name.includes('YouTube')) return 'YT';

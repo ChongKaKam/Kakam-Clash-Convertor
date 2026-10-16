@@ -74,6 +74,7 @@ test('authenticated whitelist survives restart and immediately changes existing 
   assert.ok(!JSON.stringify(preview).includes('password'));
   assert.ok(!JSON.stringify(preview).includes('example.com'));
   assert.ok(preview.groups.some((group) => group.name === 'US 美国自动'));
+  assert.equal(preview.groups.find((group) => group.name === 'Esim').default, 'DIRECT');
   assert.equal((await api(`/api/subscriptions/${subscription.id}/preview?device=invalid`)).status, 400);
   assert.equal((await api(`/api/subscriptions/${subscription.id}/latency?device=ios`, 'POST')).status, 503);
   const idle = await (await api(`/api/subscriptions/${subscription.id}/latency?device=tvos`)).json();
@@ -103,6 +104,7 @@ test('authenticated whitelist survives restart and immediately changes existing 
     const label = { tvos: 'tvOS', ios: 'iOS', android: 'Android' }[device];
     assert.equal(response.headers.get('content-disposition'), `attachment; filename=${label}-kakamlab.yaml`);
     const config = YAML.parse(await response.text());
+    assert.equal(config['proxy-groups'].find((group) => group.name === 'Esim').proxies[0], 'DIRECT');
     assert.equal(config.proxies.find(p => p.name === 'DMIT-US').uuid, 'private-dmit-uuid');
     const ai = config['proxy-groups'].find(g => g.name === 'AI-自动');
     assert.deepEqual(ai.proxies, ['DMIT-US']);
