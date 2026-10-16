@@ -11,9 +11,8 @@
 - 地区使用服务自带 PNG 图标和 `HK/TW/US/JP` 文字标识，不依赖系统旗帜 Emoji 字体；生成的配置带有对应 `icon` URL。
 - 网页按设备可视化展示地区组、服务组、配置默认策略和过滤后的节点，支持按组筛选、名称/协议搜索、延迟排序。
 - 网页可通过独立 Mihomo 内核实测过滤后节点的 HTTP 延迟，展示进度、成功/失败和测试时间。
-- 服务分组：AI 平台（含 Apple 智能）、YouTube、Netflix、HBO、Disney+、Prime Video、Spotify、Esim、Google、邮件、日本区域、iCloud、苹果服务、微软服务、国内流媒体、漏网之鱼、广告拦截。
+- 服务分组：AI 平台（含 Apple 智能）、YouTube、Netflix、HBO、Disney+、Prime Video、Spotify、Google、邮件、日本区域、iCloud、苹果服务、微软服务、国内流媒体、漏网之鱼、广告拦截。
 - 每个服务组均可选择地区自动组和 `DIRECT`，并可单独选择节点；Spotify 仅保留地区自动组、DMIT 节点和 `DIRECT`。`直连-*` 是机场代理节点，`DIRECT` 才表示本地直连。
-- 三端的 `Esim` 默认 `DIRECT`，保留非香港节点和不含香港节点的地区自动组；排除香港节点、香港自动及通用“节点选择”入口，避免间接选到香港。其他分组的香港选项保持原样。开启“合并上游规则”时，上游 eSIM/e-SIM 分组的自包含域名/IP 规则映射到 `Esim`；未提供相关上游规则时，需补充具体服务域名才能自动分流。
 - AI 平台和 GLOBAL 默认优先 `AI-自动`；日本区域默认日本自动；iCloud、苹果、微软、国内流媒体默认 `DIRECT`；广告组默认 `REJECT`，可切换为 `DIRECT`。
 - tvOS/Android 接入 [Loyalsoldier/clash-rules](https://github.com/Loyalsoldier/clash-rules) 的 9 个基础规则集；iOS 使用 MetaCubeX 的 10 个二进制 MRS 规则集以降低启动内存。客户端每 24 小时更新。Google 基础集仅覆盖可在大陆直连的部分域名，完整服务分组由内置域名和上游规则补充。
 - 合并上游自包含域名/IP 规则时按服务映射策略组，并按域名具体程度排序，确保邮件、AI、YouTube API 等先于 Google/微软大类匹配。没有对应组的规则映射到“漏网之鱼”。

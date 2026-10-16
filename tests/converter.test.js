@@ -98,51 +98,6 @@ const dmitProxies = [
   { name: 'DMIT-US-Hysteria2', type: 'hysteria2', server: '192.0.2.1', port: 8443, password: 'fixture' },
 ];
 
-test('Esim defaults to DIRECT on every device and no selectable path reaches Hong Kong', () => {
-  const hongKongNames = ['pro-香港-01', '直连-HK-02', 'pro-Hong Kong-03', 'pro-🇭🇰-04', 'pro-港-05'];
-  const input = YAML.stringify({ proxies: [
-    ...hongKongNames.map((name) => ({ name, type: 'trojan', server: 'hk.example.com', port: 443, password: 'fixture' })),
-    ...YAML.parse(source).proxies.slice(1),
-    { name: 'pro-台湾01', type: 'mieru', server: 'tw.example.com', port: 443, username: 'fixture', password: 'fixture' },
-  ] });
-  for (const device of ['tvos', 'ios', 'android']) {
-    const config = YAML.parse(convertSubscription(input, device, { dmitProxies }));
-    const groups = new Map(config['proxy-groups'].map((group) => [group.name, group]));
-    const esim = groups.get('Esim');
-    assert.equal(esim.type, 'select');
-    assert.equal(esim.proxies[0], 'DIRECT');
-    assert.equal(esim['default-selected'], 'DIRECT');
-    for (const name of ['US 美国自动', 'JP 日本自动', '直连-美国01', 'pro-日本01', 'DMIT-US', 'DMIT-US-Hysteria2']) {
-      assert.ok(esim.proxies.includes(name), `${device}: ${name}`);
-    }
-    assert.equal(esim.proxies.includes('TW 台湾自动'), device !== 'tvos');
-    assert.equal(esim.proxies.includes('pro-台湾01'), device !== 'tvos');
-    const visit = (name) => {
-      assert.ok(!hongKongNames.includes(name), `${device}: Esim reaches ${name}`);
-      assert.ok(!['HK 香港自动', '🚀 节点选择', 'GLOBAL'].includes(name), name);
-      for (const member of groups.get(name)?.proxies || []) visit(member);
-    };
-    visit('Esim');
-    assert.deepEqual(groups.get('HK 香港自动').proxies, hongKongNames);
-    assert.ok(groups.get('🚀 节点选择').proxies.includes('HK 香港自动'));
-    assert.ok(groups.get('GLOBAL').proxies.includes('Esim'));
-    const preview = subscriptionPreview(config, device).groups.find((group) => group.name === 'Esim');
-    assert.equal(preview.default, 'DIRECT');
-    assert.deepEqual(preview.members, esim.proxies);
-  }
-});
-
-test('Esim stays usable with only Hong Kong nodes and excludes mixed-region automatic groups', () => {
-  for (const device of ['tvos', 'ios', 'android']) {
-    for (const names of [['pro-香港01'], ['pro-US-HK-01', 'pro-美国02']]) {
-      const input = YAML.stringify({ proxies: names.map((name) => ({ name, type: 'trojan', server: 'example.com', port: 443, password: 'fixture' })) });
-      const config = buildSubscription(input, device);
-      const esim = config['proxy-groups'].find((group) => group.name === 'Esim');
-      assert.deepEqual(esim.proxies, names.length === 1 ? ['DIRECT'] : ['DIRECT', 'pro-美国02']);
-    }
-  }
-});
-
 test('AI offers only VLESS and direct-US while other select groups include both DMIT protocols', () => {
   for (const device of ['ios', 'android', 'tvos']) {
     const config = YAML.parse(convertSubscription(source, device, { dmitProxies }));

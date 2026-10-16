@@ -4,7 +4,6 @@ export const GROUP = Object.freeze({
   ai: '🤖 AI 平台', youtube: '🎬 YouTube',
   netflix: '🎬 Netflix', hbo: '🎬 HBO', disney: '🎬 Disney+', prime: '🎬 Prime Video',
   spotify: '🎵 Spotify',
-  esim: 'Esim',
   google: '🔎 Google', mail: '📪 邮件服务', japan: 'JP 日本区域',
   icloud: '☁️ iCloud', apple: '🍎 苹果服务', microsoft: '🧩 微软服务',
   domestic: '📺 国内流媒体', final: '🐟 漏网之鱼', ads: '🛡 广告拦截',
@@ -82,7 +81,6 @@ export function ruleProviders(device = 'android') {
 }
 
 function targetFor(group) {
-  if (/e[\s-]?sim/i.test(group)) return GROUP.esim;
   if (/(Apple Intelligence|Apple-智能|苹果智能)/i.test(group)) return GROUP.ai;
   if (/(\bAI\b|人工智能|ChatGPT|Claude|Gemini|Grok|Perplexity)/i.test(group)) return GROUP.ai;
   if (/YouTube/i.test(group)) return GROUP.youtube;

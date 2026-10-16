@@ -129,23 +129,6 @@ test('service categories still exist with upstream merging disabled', () => {
   assert.equal(domainRoute(config, 'grok.com'), GROUP.ai);
 });
 
-test('upstream eSIM rules route through Esim while the DIRECT whitelist still takes precedence', () => {
-  for (const name of ['Esim', '📱 eSIM', 'e-SIM']) {
-    const input = YAML.parse(source);
-    input['proxy-groups'].push({ name, type: 'select', proxies: ['DIRECT'] });
-    input.rules.push(`DOMAIN-SUFFIX,esim.custom.example,${name}`, `IP-CIDR,198.51.100.0/24,${name},no-resolve`);
-    for (const device of ['tvos', 'ios', 'android']) {
-      const convert = (options = {}) => YAML.parse(convertSubscription(YAML.stringify(input), device, options));
-      const config = convert();
-      assert.equal(domainRoute(config, 'api.esim.custom.example'), GROUP.esim);
-      assert.ok(config.rules.includes(`IP-CIDR,198.51.100.0/24,${GROUP.esim},no-resolve`));
-      assert.equal(config['proxy-groups'].find((group) => group.name === GROUP.esim).proxies[0], 'DIRECT');
-      assert.equal(domainRoute(convert({ directWhitelist: ['esim.custom.example'] }), 'api.esim.custom.example'), 'DIRECT');
-      assert.equal(domainRoute(convert({ includeUpstreamRules: false }), 'api.esim.custom.example'), undefined);
-    }
-  }
-});
-
 test('iOS loads binary MRS rule sets without YAML parsing or a full GeoIP database', () => {
   const config = output('ios');
   const providers = config['rule-providers'];
