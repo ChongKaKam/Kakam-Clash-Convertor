@@ -1,11 +1,12 @@
 # Clash Subscription Converter
 
-一个自托管的 Clash/Mihomo 订阅管理与转换服务。输入上游订阅 URL，服务会定时拉取并缓存内容，筛选 `pro-*`、`直连-*` 中属于香港、台湾、美国、日本的节点，并分别生成 tvOS、iOS、Android 订阅地址。
+一个自托管的 Clash/Mihomo 订阅管理与转换服务。输入上游订阅 URL，服务会定时拉取并缓存内容，筛选 `pro-*`、`直连-*` 中属于香港、台湾、美国、日本的节点，并分别生成 tvOS、iOS、Android、Esim 四个平台的订阅地址。
 
 ## 功能
 
 - 支持 Clash/Mihomo YAML，以及常见 Base64/URI 节点订阅（SS、VMess、VLESS、Trojan、Hysteria2、TUIC）。
 - 香港、台湾、美国、日本独立 `url-test` 自动测速组；没有节点的地区不会生成空策略组。
+- `Esim` 是独立平台，订阅入口为 `/sub/:token/esim.yaml`，网页提供单独的链接、预览和测速选项。沿用 iOS 的移动端预设与 MRS 规则集，移除全部香港节点和“HK 香港自动”；各策略组中的香港选项按原顺序替换为 `DIRECT` 并去重，原先默认香港的选择改为直连。其他地区节点、服务分流和 AI 策略保留；上游只有香港节点时生成纯直连配置。
 - 原 `🌈 AI 自动` 改名为 `美国-直连-自动`，仍仅包含名称以 `直连-美国` 开头且兼容当前设备的节点。`AI-自动` 在 iOS/tvOS 中为故障回退组，顺序为 `DMIT-US`（VLESS + REALITY）→ `美国-直连-自动`；Android 中为 `select` 手动选择组，用户可在这两个候选项中自行选择，AI 平台也可直接选择 `美国-直连-自动`。三端 AI 平台和 GLOBAL 仍以 `AI-自动` 为配置默认值；缺少的候选项自动省略，全部缺少时不生成空组。
 - 从私有数据目录的 `dmit.yaml` 加载 DMIT 节点，加入常规手动选择组（含 Spotify、GLOBAL、节点选择）及美国地区自动组；香港、台湾、日本自动组继续仅包含对应地区的节点。Hysteria2 命名为 `DMIT-US-Hysteria2`，供常规手动选择，三端 `AI-自动` 的候选项均不包含 Hysteria2。
 - 地区使用服务自带 PNG 图标和 `HK/TW/US/JP` 文字标识，不依赖系统旗帜 Emoji 字体；生成的配置带有对应 `icon` URL。
@@ -18,7 +19,7 @@
 - 合并上游自包含域名/IP 规则时按服务映射策略组，并按域名具体程度排序，确保邮件、AI、YouTube API 等先于 Google/微软大类匹配。没有对应组的规则映射到“漏网之鱼”。
 - 网页可编辑全局 DIRECT 白名单，匹配时强制直连，优先于所有分组和广告规则。持久化到 `/data/settings.json`，保存后下一次下载同一订阅链接即可生效。
 - tvOS 在生成策略组之前排除 `mieru` 节点；过滤后无节点的地区不生成空组，全部无可用节点则返回明确的 HTTP 422 错误。iOS、Android 保留 Mieru。
-- 三套设备预设：tvOS 关闭 TUN/嗅探，iOS 关闭 TUN、启用保守嗅探，Android 启用 TUN/DNS 劫持与完整嗅探。
+- 四套平台预设：tvOS 关闭 TUN/嗅探，iOS 关闭 TUN、启用保守嗅探，Android 启用 TUN/DNS 劫持与完整嗅探；Esim 沿用 iOS 预设并将香港选项改为直连。
 - 管理 API 使用 Bearer Token；设备订阅使用独立的高熵公开令牌，可随时轮换。
 - 阻止本机/内网上游地址，并提供响应大小限制、拉取超时、重定向复检、原子化持久化。
 
@@ -116,7 +117,7 @@ sub.example.com {
 
 ## 分组预览与网页测速
 
-展开订阅卡片的“分组与节点”，切换 iOS、tvOS、Android 可查看该设备最终配置。点击地区/服务卡片查看可选策略及其节点；这是配置预览，不会改变客户端正在使用的策略。tvOS 预览与下载使用同一过滤逻辑，排除 Mieru。
+展开订阅卡片的“分组与节点”，切换 iOS、tvOS、Android、Esim 可查看该平台最终配置。点击地区/服务卡片查看可选策略及其节点；这是配置预览，不会改变客户端正在使用的策略。预览、下载与测速共用平台过滤逻辑：tvOS 排除 Mieru，Esim 将香港节点与香港自动替换为 `DIRECT`，仅对保留的代理节点测速。
 
 点击“开始测速”后，服务启动临时独立 Mihomo 实例，通过各节点请求 `https://www.gstatic.com/generate_204`。数值是**服务器 → 代理 → 测试网址的 HTTP 延迟**，不是下载带宽，也不是手机/电视的实际延迟。测试使用当前设备全部过滤后节点，搜索和分组筛选仅改变显示范围。失败或超时单独标记，不生成虚假延迟。
 
@@ -132,12 +133,12 @@ sub.example.com {
 - `POST /api/subscriptions`：添加并立即验证，JSON 字段为 `name`、`url`、`includeUpstreamRules`。
 - `PATCH /api/subscriptions/:id`：更新订阅。
 - `POST /api/subscriptions/:id/refresh`：立即刷新。
-- `GET /api/subscriptions/:id/preview?device=ios`：返回过滤后节点、分组、规则数量和测速快照；设备可选 `ios`、`tvos`、`android`。
+- `GET /api/subscriptions/:id/preview?device=ios`：返回过滤后节点、分组、规则数量和测速快照；平台可选 `ios`、`tvos`、`android`、`esim`。
 - `POST /api/subscriptions/:id/latency?device=ios`：启动真实 HTTP 延迟测试，返回 202；内核未配置返回 503，其他任务运行中返回 409，重复测试过快返回 429。
 - `GET /api/subscriptions/:id/latency?device=ios`：读取该设备测试进度与结果。
 - `POST /api/subscriptions/:id/token`：轮换设备链接令牌。
 - `DELETE /api/subscriptions/:id`：删除订阅和缓存。
-- `GET /sub/:token/{tvos|ios|android}.yaml`：设备订阅输出。
+- `GET /sub/:token/{tvos|ios|android|esim}.yaml`：平台订阅输出。
 
 ## 本地开发
 
@@ -172,6 +173,6 @@ docker compose --env-file .env.production logs --tail=100
 
 ## 下载文件名称
 
-设备订阅 URL 保持原来的 `/sub/:token/tvos.yaml`、`ios.yaml`、`android.yaml`，无需更换已有链接。HTTP 下载响应使用无引号的 `Content-Disposition: attachment; filename=...`，文件名分别为 `tvOS-kakamlab.yaml`、`iOS-kakamlab.yaml`、`Android-kakamlab.yaml`。保留 `.yaml` 扩展名用于软件识别配置。客户端若自行给已有订阅命名，不一定会随下载文件名更新，需要手动重命名。
+原有平台订阅 URL `/sub/:token/tvos.yaml`、`ios.yaml`、`android.yaml` 保持不变。Esim 使用独立的 `/sub/:token/esim.yaml`，可在管理页复制并导入客户端；与原平台共用订阅令牌。HTTP 下载响应使用无引号的 `Content-Disposition: attachment; filename=...`，四个平台的文件名分别为 `tvOS-kakamlab.yaml`、`iOS-kakamlab.yaml`、`Android-kakamlab.yaml`、`Esim-kakamlab.yaml`。保留 `.yaml` 扩展名用于软件识别配置。客户端若自行给已有订阅命名，不一定会随下载文件名更新，需要手动重命名。
 
 服务只缓存上游原文与必要元数据，不会把订阅凭据写入日志或前端列表。请把 `/data` 作为敏感数据备份和保护。

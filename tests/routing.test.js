@@ -105,7 +105,7 @@ test('tvOS removes Mieru before groups are built; other devices keep it', () => 
 });
 
 test('no unresolved groups or rule providers and no dependency on GeoSite categories', () => {
-  for (const device of ['tvos', 'ios', 'android']) {
+  for (const device of ['tvos', 'ios', 'android', 'esim']) {
     const config = output(device);
     const actions = new Set(['DIRECT', 'REJECT', 'REJECT-DROP', ...config.proxies.map((p) => p.name), ...config['proxy-groups'].map((g) => g.name)]);
     for (const group of config['proxy-groups']) {

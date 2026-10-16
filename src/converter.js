@@ -63,8 +63,25 @@ function eligible(proxy) {
   return /^(pro-|直连-)/i.test(name) && REGIONS.some(({ pattern }) => pattern.test(name));
 }
 
+function esimProfile(config) {
+  const hongKong = REGIONS.find((region) => region.key === 'hk');
+  const removed = new Set([hongKong.name, ...config.proxies.filter((proxy) => hongKong.pattern.test(proxy.name)).map((proxy) => proxy.name)]);
+  const replace = (name) => removed.has(name) ? 'DIRECT' : name;
+  return {
+    ...config,
+    proxies: config.proxies.filter((proxy) => !removed.has(proxy.name)),
+    'proxy-groups': config['proxy-groups'].filter((group) => group.name !== hongKong.name).map((group) => ({
+      ...group,
+      // Preserve the position of former Hong Kong choices, including defaults.
+      proxies: [...new Set(group.proxies.map(replace))],
+      ...(group['default-selected'] ? { 'default-selected': replace(group['default-selected']) } : {}),
+    })),
+  };
+}
+
 export function buildSubscription(text, device = 'android', options = {}) {
-  if (!['tvos', 'ios', 'android'].includes(device)) throw new HttpError(400, '设备必须是 tvos、ios 或 android');
+  if (!['tvos', 'ios', 'android', 'esim'].includes(device)) throw new HttpError(400, '平台必须是 tvos、ios、android 或 esim');
+  if (device === 'esim') return esimProfile(buildSubscription(text, 'ios', options));
   const source = parseSubscription(text);
   // Reserve the private node names before naming upstream nodes.
   const dmitProxies = options.dmitProxies ?? [];

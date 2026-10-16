@@ -17,6 +17,7 @@ test('authenticated whitelist survives restart and immediately changes existing 
   const source = YAML.stringify({ proxies: [
     { name: 'pro-美国01', type: 'ss', server: 'example.com', port: 443, cipher: 'aes-128-gcm', password: 'fixture' },
     { name: '直连-日本01', type: 'mieru', server: 'example.com', port: 443, username: 'fixture', password: 'fixture' },
+    { name: 'pro-香港01', type: 'trojan', server: 'hk.example.com', port: 443, password: 'fixture' },
   ] });
   const upstream = http.createServer((_req, res) => res.end(source));
   upstream.listen(0, '127.0.0.1');
@@ -69,15 +70,16 @@ test('authenticated whitelist survives restart and immediately changes existing 
   const previewPath = `/api/subscriptions/${subscription.id}/preview?device=tvos`;
   assert.equal((await fetch(base + previewPath)).status, 401);
   const preview = await (await api(previewPath)).json();
-  assert.equal(preview.nodes.length, 1);
+  assert.equal(preview.nodes.length, 2);
   assert.equal(preview.nodes[0].name, 'pro-美国01');
   assert.ok(!JSON.stringify(preview).includes('password'));
   assert.ok(!JSON.stringify(preview).includes('example.com'));
   assert.ok(preview.groups.some((group) => group.name === 'US 美国自动'));
   assert.equal((await api(`/api/subscriptions/${subscription.id}/preview?device=invalid`)).status, 400);
   assert.equal((await api(`/api/subscriptions/${subscription.id}/latency?device=ios`, 'POST')).status, 503);
+  assert.equal((await api(`/api/subscriptions/${subscription.id}/latency?device=esim`, 'POST')).status, 503);
   const idle = await (await api(`/api/subscriptions/${subscription.id}/latency?device=tvos`)).json();
-  assert.equal(idle.status, 'idle'); assert.equal(idle.total, 1);
+  assert.equal(idle.status, 'idle'); assert.equal(idle.total, 2);
   const before = await (await fetch(`${base}/sub/${subscription.publicToken}/ios.yaml`)).text();
   assert.ok(before.includes('🤖 AI 平台'));
   // Installing the private file affects download, preview and latency immediately.
@@ -86,21 +88,21 @@ test('authenticated whitelist survives restart and immediately changes existing 
     { name: 'shared-hy2', type: 'hysteria2', server: '192.0.2.1', port: 8443, password: 'private-dmit-password' },
   ]));
   const dmitPreview = await (await api(previewPath)).json();
-  assert.deepEqual(dmitPreview.nodes.map(n => n.name), ['DMIT-US', 'DMIT-US-Hysteria2', 'pro-美国01']);
+  assert.deepEqual(dmitPreview.nodes.map(n => n.name), ['DMIT-US', 'DMIT-US-Hysteria2', 'pro-美国01', 'pro-香港01']);
   assert.ok(!JSON.stringify(dmitPreview).includes('private-dmit-'));
   assert.ok(!JSON.stringify(dmitPreview).includes('192.0.2.1'));
   const dmitLatency = await (await api(`/api/subscriptions/${subscription.id}/latency?device=tvos`)).json();
-  assert.equal(dmitLatency.total, 3);
+  assert.equal(dmitLatency.total, 4);
   const saved = await api('/api/settings', 'PUT', { directWhitelist: 'chatgpt.com\ngateway.icloud.com\n192.0.2.0/24' });
   assert.equal(saved.status, 200);
   const expected = await saved.json();
-  for (const device of ['tvos', 'ios', 'android']) {
+  for (const device of ['tvos', 'ios', 'android', 'esim']) {
     // The URL is unchanged and no upstream refresh is needed after a settings edit.
     const response = await fetch(`${base}/sub/${subscription.publicToken}/${device}.yaml`);
     assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type'), /yaml/);
     assert.match(response.headers.get('cache-control'), /no-store/);
-    const label = { tvos: 'tvOS', ios: 'iOS', android: 'Android' }[device];
+    const label = { tvos: 'tvOS', ios: 'iOS', android: 'Android', esim: 'Esim' }[device];
     assert.equal(response.headers.get('content-disposition'), `attachment; filename=${label}-kakamlab.yaml`);
     const config = YAML.parse(await response.text());
     assert.equal(config.proxies.find(p => p.name === 'DMIT-US').uuid, 'private-dmit-uuid');
@@ -108,12 +110,26 @@ test('authenticated whitelist survives restart and immediately changes existing 
     assert.deepEqual(ai.proxies, ['DMIT-US']);
     assert.equal(ai.type, device === 'android' ? 'select' : 'fallback');
     for (const group of config['proxy-groups'].filter(g => g.type === 'select')) assert.ok(group.proxies.includes('DMIT-US'));
-    assert.ok(Object.values(config['rule-providers']).every((provider) => provider.format === (device === 'ios' ? 'mrs' : 'yaml')));
-    if (device === 'ios') assert.ok(!config.rules.some((rule) => /^(GEOIP|GEOSITE|IP-ASN),/.test(rule)));
+    const mobile = device === 'ios' || device === 'esim';
+    assert.ok(Object.values(config['rule-providers']).every((provider) => provider.format === (mobile ? 'mrs' : 'yaml')));
+    if (mobile) assert.ok(!config.rules.some((rule) => /^(GEOIP|GEOSITE|IP-ASN),/.test(rule)));
     const regionGroup = config['proxy-groups'].find((group) => group.name === 'US 美国自动');
     assert.equal(regionGroup.icon, base + '/icons/us.png');
     assert.deepEqual(config.rules.slice(0, 3), ['DOMAIN-SUFFIX,chatgpt.com,DIRECT', 'DOMAIN-SUFFIX,gateway.icloud.com,DIRECT', 'IP-CIDR,192.0.2.0/24,DIRECT']);
     assert.equal(config.proxies.some((p) => p.type === 'mieru'), device !== 'tvos');
+    assert.equal(config.proxies.some((p) => p.name === 'pro-香港01'), device !== 'esim');
+    assert.equal(config['proxy-groups'].some((group) => group.name === 'HK 香港自动'), device !== 'esim');
+    assert.ok(!config['proxy-groups'].some((group) => group.name === 'Esim'));
+    const platformPreview = await (await api(`/api/subscriptions/${subscription.id}/preview?device=${device}`)).json();
+    assert.equal(platformPreview.device, device);
+    assert.deepEqual(platformPreview.nodes.map((node) => node.name), config.proxies.map((proxy) => proxy.name));
+    const platformLatency = await (await api(`/api/subscriptions/${subscription.id}/latency?device=${device}`)).json();
+    assert.equal(platformLatency.total, config.proxies.length);
+    if (device === 'esim') {
+      assert.equal(config['proxy-groups'].find((group) => group.name === '🚀 节点选择').proxies[0], 'DIRECT');
+      assert.equal(platformPreview.groups.find((group) => group.name === '🚀 节点选择').default, 'DIRECT');
+      assert.ok(platformPreview.nodes.every((node) => node.region !== 'hk'));
+    }
   }
   const invalid = await api('/api/settings', 'PUT', { directWhitelist: ['DOMAIN,example.com,REJECT'] });
   assert.equal(invalid.status, 400);
@@ -129,6 +145,11 @@ test('authenticated whitelist survives restart and immediately changes existing 
   assert.ok(!cleared.rules.includes('DOMAIN-SUFFIX,chatgpt.com,DIRECT'));
   const page = await (await fetch(base)).text();
   assert.ok(page.includes('id="whitelist-form"'));
+  assert.ok(page.includes('四套平台配置'));
+  const explorerScript = await (await fetch(base + '/explorer.js')).text();
+  assert.ok(explorerScript.includes('data-device="esim">Esim</button>'));
+  const appScript = await (await fetch(base + '/app.js')).text();
+  assert.ok(appScript.includes("['esim','Esim']"));
   for (const code of ['hk', 'tw', 'us', 'jp']) {
     const icon = await fetch(`${base}/icons/${code}.png`);
     assert.equal(icon.status, 200); assert.equal(icon.headers.get('content-type'), 'image/png');

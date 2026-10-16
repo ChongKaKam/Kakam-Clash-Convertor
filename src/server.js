@@ -175,7 +175,7 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     if (url.pathname === '/healthz') return json(res, 200, { status: 'ok' });
     if (url.pathname.startsWith('/api/')) return await api(req, res, url);
-    const output = url.pathname.match(/^\/sub\/([A-Za-z0-9_-]+)\/(tvos|ios|android)\.yaml$/);
+    const output = url.pathname.match(/^\/sub\/([A-Za-z0-9_-]+)\/(tvos|ios|android|esim)\.yaml$/);
     if (req.method === 'GET' && output) {
       const item = store.getByToken(output[1]);
       if (!item) throw new HttpError(404, '订阅地址不存在');
@@ -188,7 +188,7 @@ const server = http.createServer(async (req, res) => {
       });
       res.writeHead(200, {
         'content-type': 'text/yaml; charset=utf-8',
-        'content-disposition': `attachment; filename=${{ tvos: 'tvOS', ios: 'iOS', android: 'Android' }[output[2]]}-kakamlab.yaml`,
+        'content-disposition': `attachment; filename=${{ tvos: 'tvOS', ios: 'iOS', android: 'Android', esim: 'Esim' }[output[2]]}-kakamlab.yaml`,
         'profile-update-interval': String(config.refreshIntervalMinutes / 60),
         'cache-control': 'private, no-store',
       });

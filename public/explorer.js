@@ -40,7 +40,7 @@ export function mountExplorer(host, item, request) {
       <summary>分组与节点 <span class="explorer-caption">查看配置 · HTTP 延迟</span></summary>
       <div class="explorer-body">
         <div class="explorer-toolbar">
-          <div class="device-tabs" role="group" aria-label="预览设备"><button type="button" data-device="ios">iOS</button><button type="button" data-device="tvos">tvOS</button><button type="button" data-device="android">Android</button></div>
+          <div class="device-tabs" role="group" aria-label="预览平台"><button type="button" data-device="ios">iOS</button><button type="button" data-device="tvos">tvOS</button><button type="button" data-device="android">Android</button><button type="button" data-device="esim">Esim</button></div>
           <span class="preview-count"></span>
         </div>
         <p class="explorer-error" role="status"></p>
@@ -134,7 +134,7 @@ export function mountExplorer(host, item, request) {
       body.append(row);
     }
     if (!nodes.length) { const row = element('tr'); const cell = element('td', 'no-nodes', '没有符合筛选条件的节点'); cell.colSpan = 4; row.append(cell); body.append(row); }
-    $('.node-footer').textContent = `显示 ${nodes.length} / ${preview.nodes.length} 个过滤后节点${device === 'tvos' ? ' · 已排除 Mieru' : ''} · 测速使用当前设备的全部过滤后节点`;
+    $('.node-footer').textContent = `显示 ${nodes.length} / ${preview.nodes.length} 个过滤后节点${device === 'tvos' ? ' · 已排除 Mieru' : device === 'esim' ? ' · 香港节点及香港自动已替换为 DIRECT' : ''} · 测速使用当前平台的全部过滤后节点`;
     const successful = job.results.filter((result) => result.status === 'ok').length;
     const failed = job.results.filter((result) => result.status === 'failed').length;
     let text = job.status === 'idle' ? '尚未测速。点击开始后显示真实结果。' : `${job.status === 'running' ? '正在测速' : '最近一次测试'} ${job.completed}/${job.total} · 成功 ${successful} · 失败 ${failed}`;
@@ -142,10 +142,11 @@ export function mountExplorer(host, item, request) {
     if (job.stale) text = '节点配置已更新，旧测速结果已隐藏，请重新测速。';
     if (job.error) text += ` · ${job.error}`;
     if (!job.available) text = '服务器未配置测速内核，暂时无法测速。';
+    if (!preview.nodes.length) text = '当前平台为直连配置，没有需要测速的代理节点。';
     $('.latency-summary').textContent = text;
     $('.latency-progress').max = job.total || 1; $('.latency-progress').value = job.completed;
     $('.latency-progress').hidden = job.status !== 'running';
-    $('.test-nodes').disabled = !job.available || job.status === 'running';
+    $('.test-nodes').disabled = !job.available || job.status === 'running' || !preview.nodes.length;
     $('.test-nodes').textContent = job.status === 'running' ? '测速中…' : job.status === 'idle' ? '开始测速' : '重新测速';
   }
 
