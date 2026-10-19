@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#f5f7f8">
+  <meta name="application-name" content="Clash 订阅中转站">
+  <meta name="apple-mobile-web-app-title" content="订阅中转站">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>订阅中转站 · Clash</title>
+  <link rel="icon" href="/favicon.ico" type="image/vnd.microsoft.icon" sizes="16x16 32x32 48x48">
+  <link rel="icon" href="/icons/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" sizes="180x180">
+  <link rel="manifest" href="/manifest.webmanifest">
   <script>
     try {
       const preference = localStorage.getItem('clash-theme') || 'system';
@@ -16,7 +25,6 @@
 </head>
 <body id="app">
   <svg class="icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <symbol id="icon-brand" viewBox="0 0 24 24"><path d="M5 8h11l-3-3m6 11H8l3 3M16 8l3 3M8 16l-3-3"/></symbol>
     <symbol id="icon-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></symbol>
     <symbol id="icon-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></symbol>
     <symbol id="icon-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 4-4 7-8 9-4-2-8-5-8-9V6l8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
@@ -40,7 +48,7 @@
 
   <aside class="sidebar" aria-label="工作空间导航">
     <a class="brand" href="#overview" aria-label="Clash 订阅中转站首页">
-      <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#icon-brand"/></svg></span>
+      <span class="brand-mark"><img src="/icons/pwa-icon-192.png" width="44" height="44" alt=""></span>
       <span class="brand-copy"><strong>Clash<span class="brand-dot">.</span></strong><small>订阅中转站</small></span>
     </a>
     <div class="nav-label">工作空间</div>

@@ -162,11 +162,24 @@ async function serveStatic(res, pathname) {
     res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400' });
     return res.end(REGION_ICONS[icon[1]]);
   }
-  const files = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/explorer.js': ['explorer.js', 'text/javascript'], '/styles.css': ['styles.css', 'text/css'] };
+  const files = {
+    '/': ['index.html', 'text/html'],
+    '/app.js': ['app.js', 'text/javascript'],
+    '/explorer.js': ['explorer.js', 'text/javascript'],
+    '/styles.css': ['styles.css', 'text/css'],
+    '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json'],
+    '/favicon.ico': ['favicon.ico', 'image/vnd.microsoft.icon'],
+    '/apple-touch-icon.png': ['icons/apple-touch-icon.png', 'image/png'],
+    '/icons/favicon-32.png': ['icons/favicon-32.png', 'image/png'],
+    '/icons/apple-touch-icon.png': ['icons/apple-touch-icon.png', 'image/png'],
+    '/icons/pwa-icon-192.png': ['icons/pwa-icon-192.png', 'image/png'],
+    '/icons/pwa-icon-512.png': ['icons/pwa-icon-512.png', 'image/png'],
+  };
   const entry = files[pathname];
   if (!entry) throw new HttpError(404, '页面不存在');
   const body = await fs.readFile(path.join(publicDir, entry[0]));
-  res.writeHead(200, { 'content-type': `${entry[1]}; charset=utf-8`, 'content-length': body.length, 'cache-control': 'no-cache' });
+  const contentType = entry[1].startsWith('image/') ? entry[1] : `${entry[1]}; charset=utf-8`;
+  res.writeHead(200, { 'content-type': contentType, 'content-length': body.length, 'cache-control': 'no-cache' });
   res.end(body);
 }
 

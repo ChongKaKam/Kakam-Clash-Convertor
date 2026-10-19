@@ -1,0 +1,10 @@
+Tool: built-in image_gen
+
+Use case: logo-brand.
+Asset type: final production PWA app icon for “Clash 订阅中转站”, a self-hosted subscription converter.
+Generate ONE square 1024 × 1024 icon image, front-facing, full bleed, entirely opaque.
+Backdrop: one perfectly solid deep teal background, #087577, extending to all four square corners.
+Subject: a single centered, original geometric exchange mark made from two thick, softly rounded opposing arrows. The upper arrow flows to the right and the lower arrow flows to the left. Their compact folded geometry suggests effortless conversion and connected routes. Bold filled silhouettes, generous clean negative space between them, broad blunt rounded arrowheads, consistent thickness. Upper arrow is warm near-white #F6FBFA, lower arrow pale mint #B7E7DD. Visually balanced and optically centered.
+Style: exceptionally clean flat vector-like app identity, refined and friendly, calm professional utility. Crisp antialiased edges, mathematically tidy geometry, recognizable at 32px.
+Composition: symbol occupies roughly 54% of canvas width and 44% of height; entire meaningful mark fits within the central circle of radius 38% of canvas width, leaving plenty of solid teal padding for operating-system masks.
+Constraints: only the two arrows and the teal background. No text, letters, wordmark, watermark, frame, circle badge, border, gradient, texture, noise, drop shadow, glossy bevel, 3D, perspective, mockup, rounded outer corners, transparency, extra objects, or multiple variations. This image itself is the square app-icon asset, not a presentation of an icon.
