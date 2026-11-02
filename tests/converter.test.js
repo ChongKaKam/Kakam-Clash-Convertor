@@ -119,7 +119,7 @@ test('Esim is an independent platform replacing every Hong Kong option with DIRE
   assert.equal(groups.get('🚀 节点选择').proxies[0], 'DIRECT');
   assert.equal(groups.get('🎵 Spotify').proxies[0], 'DIRECT');
   assert.deepEqual(groups.get('TW 台湾自动').proxies, ['pro-台湾01']);
-  assert.deepEqual(groups.get('AI-自动').proxies, ['DMIT-US', '美国-直连-自动']);
+  assert.deepEqual(groups.get('AI-自动').proxies, ['DMIT-US', 'DMIT-US-Hysteria2', '美国-直连-自动']);
   assert.deepEqual(groups.get('美国-直连-自动').proxies, ['直连-美国01', 'DIRECT']);
   const available = new Set(['DIRECT', 'REJECT', ...config.proxies.map((proxy) => proxy.name), ...groups.keys()]);
   for (const group of groups.values()) {
@@ -155,8 +155,8 @@ test('Esim with only Hong Kong nodes produces a valid direct-only profile', () =
   assert.deepEqual(subscriptionPreview(config, 'esim').nodes, []);
 });
 
-test('AI offers only VLESS and direct-US while other select groups include both DMIT protocols', () => {
-  for (const device of ['ios', 'android', 'tvos']) {
+test('AI offers both DMIT protocols before direct-US and AI platform allows either node', () => {
+  for (const device of ['ios', 'android', 'tvos', 'esim']) {
     const config = YAML.parse(convertSubscription(source, device, { dmitProxies }));
     const groups = config['proxy-groups'];
     assert.deepEqual(config.proxies.slice(0, 2), dmitProxies);
@@ -165,7 +165,7 @@ test('AI offers only VLESS and direct-US while other select groups include both 
     }
     const ai = groups.find(g => g.name === 'AI-自动');
     if (device === 'android') {
-      assert.deepEqual(ai, { name: 'AI-自动', type: 'select', proxies: ['DMIT-US', '美国-直连-自动'] });
+      assert.deepEqual(ai, { name: 'AI-自动', type: 'select', proxies: ['DMIT-US', 'DMIT-US-Hysteria2', '美国-直连-自动'] });
       assert.deepEqual(groups.find(g => g.name === '🤖 AI 平台').proxies.slice(0, 2), ['AI-自动', '美国-直连-自动']);
     } else {
       assert.equal(ai.type, 'fallback');
@@ -174,9 +174,9 @@ test('AI offers only VLESS and direct-US while other select groups include both 
       assert.equal(ai.lazy, false);
       assert.ok(!groups.find(g => g.name === '🤖 AI 平台').proxies.includes('美国-直连-自动'));
     }
-    assert.deepEqual(ai.proxies, ['DMIT-US', '美国-直连-自动']);
+    assert.deepEqual(ai.proxies, ['DMIT-US', 'DMIT-US-Hysteria2', '美国-直连-自动']);
     assert.deepEqual(groups.find(g => g.name === '美国-直连-自动').proxies, ['直连-美国01']);
-    assert.deepEqual(groups.find(g => g.name === 'HK 香港自动').proxies, ['pro-香港-01']);
+    if (device !== 'esim') assert.deepEqual(groups.find(g => g.name === 'HK 香港自动').proxies, ['pro-香港-01']);
     assert.deepEqual(groups.find(g => g.name === 'JP 日本自动').proxies, ['pro-日本01']);
     assert.ok(groups.find(g => g.name === 'US 美国自动').proxies.includes('DMIT-US'));
     for (const name of ['🤖 AI 平台', 'GLOBAL']) {
@@ -205,19 +205,20 @@ test('DMIT remains usable without eligible upstream nodes or a compatible direct
   const input = YAML.stringify({ proxies: [{ name: '直连-美国01', type: 'mieru' }] });
   const config = buildSubscription(input, 'tvos', { dmitProxies });
   assert.deepEqual(config.proxies, dmitProxies);
-  assert.deepEqual(config['proxy-groups'].find(g => g.name === 'AI-自动').proxies, ['DMIT-US']);
+  assert.deepEqual(config['proxy-groups'].find(g => g.name === 'AI-自动').proxies, ['DMIT-US', 'DMIT-US-Hysteria2']);
   assert.ok(!config['proxy-groups'].some(g => g.name === '美国-直连-自动'));
   const hy2Only = buildSubscription(source, 'ios', { dmitProxies: [dmitProxies[1]] });
-  assert.deepEqual(hy2Only['proxy-groups'].find(g => g.name === 'AI-自动').proxies, ['美国-直连-自动']);
+  assert.deepEqual(hy2Only['proxy-groups'].find(g => g.name === 'AI-自动').proxies, ['DMIT-US-Hysteria2', '美国-直连-自动']);
 });
 
 test('Android AI selection omits unavailable candidates without empty or dangling groups', () => {
   const proOnly = YAML.stringify({ proxies: [{ name: 'pro-美国01', type: 'trojan' }] });
   for (const [input, privateNodes, candidates] of [
     [proOnly, [], []],
-    [proOnly, [dmitProxies[1]], []],
-    [proOnly, dmitProxies, ['DMIT-US']],
-    [source, [dmitProxies[1]], ['美国-直连-自动']],
+    [proOnly, [dmitProxies[0]], ['DMIT-US']],
+    [proOnly, [dmitProxies[1]], ['DMIT-US-Hysteria2']],
+    [proOnly, dmitProxies, ['DMIT-US', 'DMIT-US-Hysteria2']],
+    [source, [dmitProxies[1]], ['DMIT-US-Hysteria2', '美国-直连-自动']],
   ]) {
     const groups = buildSubscription(input, 'android', { dmitProxies: privateNodes })['proxy-groups'];
     const ai = groups.find(g => g.name === 'AI-自动');

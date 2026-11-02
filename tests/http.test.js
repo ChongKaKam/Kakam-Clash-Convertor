@@ -107,9 +107,12 @@ test('authenticated whitelist survives restart and immediately changes existing 
     const config = YAML.parse(await response.text());
     assert.equal(config.proxies.find(p => p.name === 'DMIT-US').uuid, 'private-dmit-uuid');
     const ai = config['proxy-groups'].find(g => g.name === 'AI-自动');
-    assert.deepEqual(ai.proxies, ['DMIT-US']);
+    assert.deepEqual(ai.proxies, ['DMIT-US', 'DMIT-US-Hysteria2']);
     assert.equal(ai.type, device === 'android' ? 'select' : 'fallback');
-    for (const group of config['proxy-groups'].filter(g => g.type === 'select')) assert.ok(group.proxies.includes('DMIT-US'));
+    for (const group of config['proxy-groups'].filter(g => g.type === 'select')) {
+      assert.ok(group.proxies.includes('DMIT-US'));
+      assert.ok(group.proxies.includes('DMIT-US-Hysteria2'));
+    }
     const mobile = device === 'ios' || device === 'esim';
     assert.ok(Object.values(config['rule-providers']).every((provider) => provider.format === (mobile ? 'mrs' : 'yaml')));
     if (mobile) assert.ok(!config.rules.some((rule) => /^(GEOIP|GEOSITE|IP-ASN),/.test(rule)));
@@ -122,6 +125,8 @@ test('authenticated whitelist survives restart and immediately changes existing 
     assert.ok(!config['proxy-groups'].some((group) => group.name === 'Esim'));
     const platformPreview = await (await api(`/api/subscriptions/${subscription.id}/preview?device=${device}`)).json();
     assert.equal(platformPreview.device, device);
+    assert.deepEqual(platformPreview.groups.find(g => g.name === 'AI-自动').members, ai.proxies);
+    assert.ok(platformPreview.groups.find(g => g.name === '🤖 AI 平台').members.includes('DMIT-US-Hysteria2'));
     assert.deepEqual(platformPreview.nodes.map((node) => node.name), config.proxies.map((proxy) => proxy.name));
     const platformLatency = await (await api(`/api/subscriptions/${subscription.id}/latency?device=${device}`)).json();
     assert.equal(platformLatency.total, config.proxies.length);

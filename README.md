@@ -7,8 +7,8 @@
 - 支持 Clash/Mihomo YAML，以及常见 Base64/URI 节点订阅（SS、VMess、VLESS、Trojan、Hysteria2、TUIC）。
 - 香港、台湾、美国、日本独立 `url-test` 自动测速组；没有节点的地区不会生成空策略组。
 - `Esim` 是独立平台，订阅入口为 `/sub/:token/esim.yaml`，网页提供单独的链接、预览和测速选项。沿用 iOS 的移动端预设与 MRS 规则集，移除全部香港节点和“HK 香港自动”；各策略组中的香港选项按原顺序替换为 `DIRECT` 并去重，原先默认香港的选择改为直连。其他地区节点、服务分流和 AI 策略保留；上游只有香港节点时生成纯直连配置。
-- 原 `🌈 AI 自动` 改名为 `美国-直连-自动`，仍仅包含名称以 `直连-美国` 开头且兼容当前设备的节点。`AI-自动` 在 iOS/tvOS 中为故障回退组，顺序为 `DMIT-US`（VLESS + REALITY）→ `美国-直连-自动`；Android 中为 `select` 手动选择组，用户可在这两个候选项中自行选择，AI 平台也可直接选择 `美国-直连-自动`。三端 AI 平台和 GLOBAL 仍以 `AI-自动` 为配置默认值；缺少的候选项自动省略，全部缺少时不生成空组。
-- 从私有数据目录的 `dmit.yaml` 加载 DMIT 节点，加入常规手动选择组（含 Spotify、GLOBAL、节点选择）及美国地区自动组；香港、台湾、日本自动组继续仅包含对应地区的节点。Hysteria2 命名为 `DMIT-US-Hysteria2`，供常规手动选择，三端 `AI-自动` 的候选项均不包含 Hysteria2。
+- 原 `🌈 AI 自动` 改名为 `美国-直连-自动`，仍仅包含名称以 `直连-美国` 开头且兼容当前设备的节点。`AI-自动` 在 iOS/tvOS/Esim 中为故障回退组，顺序为 `DMIT-US`（VLESS + REALITY）→ `DMIT-US-Hysteria2` → `美国-直连-自动`；Android 中为 `select` 手动选择组，用户可在这三个候选项中自行选择，AI 平台也可直接选择 `美国-直连-自动`。四端 AI 平台和 GLOBAL 仍以 `AI-自动` 为配置默认值；缺少的候选项自动省略，全部缺少时不生成空组。
+- 从私有数据目录的 `dmit.yaml` 加载 DMIT 节点，加入常规手动选择组（含 AI 平台、Spotify、GLOBAL、节点选择）及美国地区自动组；香港、台湾、日本自动组继续仅包含对应地区的节点。Hysteria2 命名为 `DMIT-US-Hysteria2`，同时加入四端 `AI-自动` 的候选项，也可在 AI 平台中单独选择。
 - 地区使用服务自带 PNG 图标和 `HK/TW/US/JP` 文字标识，不依赖系统旗帜 Emoji 字体；生成的配置带有对应 `icon` URL。
 - 网页按设备可视化展示地区组、服务组、配置默认策略和过滤后的节点，支持按组筛选、名称/协议搜索、延迟排序。
 - 网页可通过独立 Mihomo 内核实测过滤后节点的 HTTP 延迟，展示进度、成功/失败和测试时间。
@@ -39,9 +39,9 @@ docker compose --env-file .env.production exec --user root clash-converter chown
 docker compose --env-file .env.production exec clash-converter chmod 600 /data/dmit.yaml
 ```
 
-文件在下载、预览和测速时读取，修改后无需刷新上游。客户端更新原订阅链接即可获取新分组；若已缓存手动选择，在 AI 平台中手动选一次 `AI-自动`。`美国-直连-自动` 仍按延迟自动选择机场的直连美国节点。Android 的 `AI-自动` 使用 `select`，默认首项为 `DMIT-US`（若不存在则为 `美国-直连-自动`），用户可自行切换；Android 的 AI 平台另提供 `美国-直连-自动` 选项。
+文件在下载、预览和测速时读取，修改后无需刷新上游。客户端更新原订阅链接即可获取新分组；若已缓存手动选择，在 AI 平台中手动选一次 `AI-自动`。`美国-直连-自动` 仍按延迟自动选择机场的直连美国节点。Android 的 `AI-自动` 使用 `select`，候选顺序为 `DMIT-US`、`DMIT-US-Hysteria2`、`美国-直连-自动`，默认首个存在的候选项，用户可自行切换；Android 的 AI 平台另提供 `美国-直连-自动` 选项。
 
-iOS/tvOS 的 `AI-自动` 保持使用 [Mihomo fallback](https://wiki.metacubex.one/config/proxy-groups/fallback/) 按顺序选首个可用项，每 60 秒主动探测。这里的失败指连通性检测失败，不会因 AI 网站返回地区限制、登录错误或额度耗尽而自动切换。DMIT 恢复可用后重新获得优先权；Hysteria2 可在常规手动组单独选择。
+iOS/tvOS/Esim 的 `AI-自动` 保持使用 [Mihomo fallback](https://wiki.metacubex.one/config/proxy-groups/fallback/) 按 `DMIT-US` → `DMIT-US-Hysteria2` → `美国-直连-自动` 的顺序选首个可用项，每 60 秒主动探测。这里的失败指连通性检测失败，不会因 AI 网站返回地区限制、登录错误或额度耗尽而自动切换。`DMIT-US` 恢复可用后重新获得优先权；Hysteria2 也可在 AI 平台及其他常规手动组单独选择。
 
 ## DIRECT 白名单
 

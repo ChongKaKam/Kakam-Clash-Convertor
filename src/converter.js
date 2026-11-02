@@ -3,7 +3,7 @@ import { parseSubscription } from './parser.js';
 import { GROUP, ruleProviders, routingRules } from './routing.js';
 import { directWhitelistRules } from './settings.js';
 import { HttpError } from './errors.js';
-import { DMIT_VLESS } from './dmit.js';
+import { DMIT_VLESS, DMIT_HYSTERIA2 } from './dmit.js';
 
 export const REGIONS = [
   { key: 'hk', name: 'HK 香港自动', pattern: /(香港|港|Hong\s*Kong|\bHK\b|🇭🇰)/i },
@@ -110,6 +110,7 @@ export function buildSubscription(text, device = 'android', options = {}) {
   } : null;
   const aiCandidates = [
     ...(dmitProxies.some((proxy) => proxy.name === DMIT_VLESS && proxy.type === 'vless') ? [DMIT_VLESS] : []),
+    ...(dmitProxies.some((proxy) => proxy.name === DMIT_HYSTERIA2 && proxy.type === 'hysteria2') ? [DMIT_HYSTERIA2] : []),
     ...(usDirectAuto ? [usDirectAuto.name] : []),
   ];
   const aiAuto = aiCandidates.length ? {
