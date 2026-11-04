@@ -31,6 +31,8 @@
 
 将分享的 YAML 节点文件保存为 `$DATA_DIR/dmit.yaml`（本地默认为 `data/dmit.yaml`，Docker 为 `/data/dmit.yaml`）。支持原始 YAML 列表或包含 `proxies:` 的文件；VLESS + REALITY 和 Hysteria2 各最多一个，名称自动归一为 `DMIT-US` 和 `DMIT-US-Hysteria2`，其余连接参数原样保留。文件不存在时仅使用上游节点；文件格式有误则返回明确错误，不静默忽略。该文件包含凭据，已随 `data/` 排除在 Git 和镜像构建上下文之外。
 
+DMIT 当前服务器地址为 `154.17.2.35`。更换 IP 时，同步更新私有 `dmit.yaml` 内两种协议的 `server`；若保留 `share.yaml` 分享文件，还需更新其中对应节点和 `IP-CIDR,<IP>/32,DIRECT` 规则。私有配置需单独同步到部署数据卷，Git push 不会更新该文件。
+
 远端更新代码并重建服务后，将私有文件单独复制到数据卷（在保存该文件的部署主机上执行）：
 
 ```bash
